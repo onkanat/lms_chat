@@ -1,0 +1,290 @@
+// DOM Elements
+const chatContainer = document.getElementById('chat-container');
+const userInput = document.getElementById('user-input');
+const serverUrlInput = document.getElementById('server-url');
+const connectButton = document.getElementById('connect-button');
+const connectionStatus = document.getElementById('connection-status');
+const sendButton = document.getElementById('send-button');
+const modelSelect = document.getElementById('model-select');
+
+// Global Variables
+let isConnected = false;
+let currentModel = '';
+
+// Marked.js Configuration
+marked.setOptions({
+    gfm: true,
+    breaks: true,
+    sanitize: false,
+    highlight: (code, lang) => Prism.highlight(code, Prism.languages[lang] || Prism.languages.javascript, 'javascript')
+});
+
+// Event Listeners
+connectButton.addEventListener('click', connectToServer);
+userInput.addEventListener('keypress', sendMessageKeydown);
+sendButton.addEventListener('click', sendMessage);
+modelSelect.addEventListener('change', handleModelChange);
+
+// Initial Setup
+serverUrlInput.focus();
+createSaveButton();
+
+// Functions
+function handleModelChange(e) {
+    currentModel = e.target.value;
+    addMessage(`Model changed to: ${currentModel}`, false);
+}
+
+function connectToServer() {
+    const serverUrl = serverUrlInput.value.trim();
+    if (!serverUrl) return updateConnectionStatus('Please enter a valid server address', false);
+
+    fetch(`${serverUrl}/v1/models`, { method: 'GET' })
+        .then(response => response.json())
+        .then(data => handleModelData(serverUrl, data))
+        .catch(error => handleError(error));
+}
+
+function handleModelData(serverUrl, data) {
+    if (!data.data || !data.data.length) throw new Error('No models available');
+
+    modelSelect.innerHTML = '<option value="">Select a model...</option>';
+    data.data.forEach(model => addOptionToSelect(model.id));
+
+    modelSelect.disabled = false;
+    currentModel = data.data[0].id;
+    modelSelect.value = currentModel;
+    sendButton.disabled = false;
+    isConnected = true;
+    updateConnectionStatus('Connected', true);
+}
+
+function handleError(error) {
+    console.error('Error:', error);
+    updateConnectionStatus('Failed to connect', false);
+    addMessage('Error: Unable to connect to the LM Studio server. Please check the address and try again.', false);
+}
+
+function addOptionToSelect(value) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    modelSelect.appendChild(option);
+}
+
+function updateConnectionStatus(message, connected) {
+    connectionStatus.textContent = message;
+    connectionStatus.style.color = connected ? 'var(--accent-color)' : '#f44336';
+    connectButton.textContent = connected ? 'Disconnect' : 'Connect';
+
+    serverUrlInput.disabled = connected;
+    modelSelect.disabled = !connected;
+    userInput.disabled = !connected;
+    sendButton.disabled = !connected;
+}
+
+function sendMessage() {
+    const message = userInput.value.trim();
+    if (!message || !isConnected) return;
+
+    addMessage(message, true);
+    userInput.value = '';
+    sendButton.disabled = true;
+
+    fetch(`${serverUrlInput.value}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: currentModel,
+            messages: [
+                { role: 'system', content: 'I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.' },
+                { role: 'user', content: message }
+            ],
+            temperature: 0.8,
+            max_tokens: -1,
+            stream: false
+        })
+    })
+    .then(response => response.json())
+    .then(data => handleResponseData(message, data))
+    .catch(error => handleErrorSend(error));
+}
+
+function handleResponseData(originalMessage, data) {
+    const botReply = data.choices[0].message.content;
+    const totalTokens = data.usage.total_tokens;
+    const timeElapsed = ((performance.now() - performance.now()) / 1000).toFixed(2);
+    const stopReason = data.choices[0].finish_reason === 'stop' ? 'eosFound' : data.choices[0].finish_reason;
+
+    addMessage(botReply, false, `${totalTokens} tokens • ${timeElapsed}s • Stop: ${stopReason}`);
+    sendButton.disabled = false;
+}
+
+function handleErrorSend(error) {
+    console.error('Error:', error);
+    addMessage('Error: Unable to get a response from the server. Please try again.', false);
+
+    isConnected = false;
+    updateConnectionStatus('Disconnected', false);
+    sendButton.disabled = true;
+    userInput.focus();
+}
+
+function sendMessageKeydown(e) {
+    if (e.key === 'Enter') sendMessage();
+}
+
+function createSaveButton() {
+    const saveButton = document.createElement('button');
+    saveButton.textContent = 'Save Chat';
+    saveButton.onclick = saveChat;
+    chatContainer.appendChild(saveButton);
+}
+
+function saveChat() {
+    const messages = Array.from(chatContainer.querySelectorAll('.message')).map(msg => ({
+        author: msg.querySelector('.message-header .header-content')?.innerText || 'Unknown',
+        content: msg.querySelector('.message-content')?.innerText || '',
+        timestamp: new Date().toISOString()
+    }));
+
+    const jsonBlob = new Blob([JSON.stringify(messages, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(jsonBlob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'chat.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function addMessage(content, isUser, metrics = null) {
+    chatContainer.appendChild(createMessageElement(content, isUser, metrics));
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function createMessageElement(content, isUser, metrics) {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', isUser ? 'user-message' : 'assistant-message');
+
+    if (!isUser && currentModel)
+        messageDiv.appendChild(createModelDiv(currentModel));
+
+    messageDiv.appendChild(createHeaderDiv(isUser));
+    messageDiv.appendChild(createCopyButton(content));
+    const contentDiv = createContentDiv(content, isUser);
+    processCodeBlocksAndMathJax(contentDiv);
+    messageDiv.appendChild(contentDiv);
+
+    if (metrics)
+        messageDiv.appendChild(createMetricsDiv(metrics));
+
+    return messageDiv;
+}
+
+function createModelDiv(model) {
+    const modelDiv = document.createElement('div');
+    modelDiv.classList.add('message-model');
+    modelDiv.textContent = model;
+    return modelDiv;
+}
+
+function createHeaderDiv(isUser) {
+    const headerDiv = document.createElement('div');
+    headerDiv.classList.add('message-header', 'header-flex');
+
+    const headerContent = document.createElement('div');
+    headerContent.classList.add('header-content');
+    headerContent.textContent = isUser ? 'You:' : 'Assistant:';
+
+    headerDiv.appendChild(headerContent);
+    return headerDiv;
+}
+
+function createContentDiv(content, isUser) {
+    const contentDiv = document.createElement('div');
+    contentDiv.classList.add('message-content');
+
+    if (!isUser)
+        contentDiv.innerHTML = marked.parse(content);
+    else
+        contentDiv.textContent = content;
+
+    return contentDiv;
+}
+
+function processCodeBlocksAndMathJax(contentDiv) {
+    try {
+        Prism.highlightAllUnder(contentDiv);
+    } catch (error) {
+        console.error('Prism.js highlighting failed:', error);
+    }
+    handleMathJax(contentDiv);
+    loadAndRenderMathJax(contentDiv);
+}
+
+function handleMathJax(contentDiv) {
+    try {
+        MathJax.typeset([contentDiv]);
+    } catch (error) {
+        console.error('MathJax processing failed:', error);
+    }
+}
+
+function loadAndRenderMathJax(contentDiv) {
+    if (!document.querySelector('script[type="math/tex"]')) {
+        const scriptTag = document.createElement('script');
+        const head = document.head || document.documentElement;
+        scriptTag.type = 'text/x-mathjax-config';
+        scriptTag.src = '//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML';
+        head.appendChild(scriptTag);
+
+        const configScript = document.createElement('script');
+        configScript.type = 'text/x-mathjax-config';
+        configScript.innerHTML = `MathJax.Hub.Config({tex2jax: {inlineMath: [["$","$"],["\$$","\$$"]]}});`;
+        head.appendChild(configScript);
+    }
+    MathJax.typeset([contentDiv]);
+}
+
+function createCopyButton(content) {
+    const copyButton = document.createElement('button');
+    copyButton.classList.add('copy-button');
+
+    copyButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>`;
+
+    copyButton.addEventListener('click', () => {
+        navigator.clipboard.writeText(content).then(() => {
+            copyButton.classList.add('copied');
+            setTimeout(() => copyButton.classList.remove('copied'), 1000);
+        });
+    });
+
+    return copyButton;
+}
+
+function createMetricsDiv(metrics) {
+    const metricsDiv = document.createElement('div');
+    metricsDiv.classList.add('message-metrics');
+    metricsDiv.textContent = metrics;
+    return metricsDiv;
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.metaKey && event.key === 'p') {
+        event.preventDefault();
+        window.open('p_editor.html', 'Text Editor', 'width=820,height=320');
+    }
+});
+
+window.addEventListener('message', function(event) {
+    const text = event.data;
+    const userInput = document.getElementById('user-input');
+    userInput.value = text;
+}); 

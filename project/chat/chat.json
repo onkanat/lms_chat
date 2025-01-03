@@ -1,0 +1,12 @@
+[
+  {
+    "author": "You:",
+    "content": "Hi. bağlantı testi.",
+    "timestamp": "2025-01-03T13:37:23.972Z"
+  },
+  {
+    "author": "Assistant:",
+    "content": "It seems like you're trying to connect or test the communication channel with me.\n\nTo confirm, you'd like to have a conversation and ask for help with coding-related questions in Python, C, or JavaScript, right?\n\nI'm Qwen, your friendly coding assistant. Feel free to ask me anything!",
+    "timestamp": "2025-01-03T13:37:23.973Z"
+  }
+]
