@@ -90,6 +90,18 @@ function sendMessage() {
     addMessage(message, true);
     userInput.value = '';
     sendButton.disabled = true;
+    
+    // Check if RAG is enabled
+    const ragEnabled = document.getElementById('rag-toggle')?.checked || false;
+    let userPrompt = message;
+    let ragContext = null;
+    
+    // If RAG is enabled and we have documents, augment the prompt
+    if (ragEnabled && window.RAG && window.RAG.getDocumentCount() > 0) {
+        const ragResult = window.RAG.augmentPromptWithRAG(message);
+        userPrompt = ragResult.augmentedPrompt;
+        ragContext = ragResult.context;
+    }
 
     fetch(`${serverUrlInput.value}/v1/chat/completions`, {
         method: 'POST',
@@ -98,7 +110,7 @@ function sendMessage() {
             model: currentModel,
             messages: [
                 { role: 'system', content: 'I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.' },
-                { role: 'user', content: message }
+                { role: 'user', content: userPrompt }
             ],
             temperature: 0.8,
             max_tokens: -1,
@@ -106,17 +118,17 @@ function sendMessage() {
         })
     })
     .then(response => response.json())
-    .then(data => handleResponseData(message, data))
+    .then(data => handleResponseData(message, data, ragContext))
     .catch(error => handleErrorSend(error));
 }
 
-function handleResponseData(originalMessage, data) {
+function handleResponseData(originalMessage, data, ragContext = null) {
     const botReply = data.choices[0].message.content;
     const totalTokens = data.usage.total_tokens;
     const timeElapsed = ((performance.now() - performance.now()) / 1000).toFixed(2);
     const stopReason = data.choices[0].finish_reason === 'stop' ? 'eosFound' : data.choices[0].finish_reason;
 
-    addMessage(botReply, false, `${totalTokens} tokens • ${timeElapsed}s • Stop: ${stopReason}`);
+    addMessage(botReply, false, `${totalTokens} tokens • ${timeElapsed}s • Stop: ${stopReason}`, ragContext);
     sendButton.disabled = false;
 }
 
@@ -160,12 +172,12 @@ function saveChat() {
     URL.revokeObjectURL(url);
 }
 
-function addMessage(content, isUser, metrics = null) {
-    chatContainer.appendChild(createMessageElement(content, isUser, metrics));
+function addMessage(content, isUser, metrics = null, ragContext = null) {
+    chatContainer.appendChild(createMessageElement(content, isUser, metrics, ragContext));
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-function createMessageElement(content, isUser, metrics) {
+function createMessageElement(content, isUser, metrics, ragContext = null) {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', isUser ? 'user-message' : 'assistant-message');
 
@@ -174,6 +186,12 @@ function createMessageElement(content, isUser, metrics) {
 
     messageDiv.appendChild(createHeaderDiv(isUser));
     messageDiv.appendChild(createCopyButton(content));
+    
+    // Add RAG context if available
+    if (!isUser && ragContext && ragContext.length > 0) {
+        messageDiv.appendChild(createRAGContextDiv(ragContext));
+    }
+    
     const contentDiv = createContentDiv(content, isUser);
     processCodeBlocksAndMathJax(contentDiv);
     messageDiv.appendChild(contentDiv);
@@ -182,6 +200,46 @@ function createMessageElement(content, isUser, metrics) {
         messageDiv.appendChild(createMetricsDiv(metrics));
 
     return messageDiv;
+}
+
+function createRAGContextDiv(ragContext) {
+    const contextDiv = document.createElement('div');
+    contextDiv.classList.add('rag-context');
+    
+    const contextHeader = document.createElement('div');
+    contextHeader.classList.add('rag-context-header');
+    
+    const headerText = document.createElement('span');
+    headerText.textContent = `Response augmented with ${ragContext.length} document${ragContext.length > 1 ? 's' : ''}`;
+    
+    const toggleButton = document.createElement('button');
+    toggleButton.classList.add('rag-context-toggle');
+    toggleButton.textContent = 'Show sources';
+    
+    contextHeader.appendChild(headerText);
+    contextHeader.appendChild(toggleButton);
+    
+    const contextContent = document.createElement('div');
+    contextContent.classList.add('rag-context-content');
+    
+    // Add each source document
+    ragContext.forEach(chunk => {
+        const sourceDiv = document.createElement('div');
+        sourceDiv.classList.add('rag-source');
+        sourceDiv.innerHTML = `<strong>${chunk.documentName}</strong>: "${chunk.content.substring(0, 150)}${chunk.content.length > 150 ? '...' : ''}"`;
+        contextContent.appendChild(sourceDiv);
+    });
+    
+    // Toggle visibility of context content
+    toggleButton.addEventListener('click', () => {
+        const isExpanded = contextContent.classList.toggle('expanded');
+        toggleButton.textContent = isExpanded ? 'Hide sources' : 'Show sources';
+    });
+    
+    contextDiv.appendChild(contextHeader);
+    contextDiv.appendChild(contextContent);
+    
+    return contextDiv;
 }
 
 function createModelDiv(model) {

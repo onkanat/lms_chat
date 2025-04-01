@@ -7,6 +7,8 @@ A lightweight web interface for interacting with LM Studio's local API server.
 - Connect to any LM Studio server by URL
 - Select from available models
 - Chat with AI models through a clean interface
+- Retrieval-Augmented Generation (RAG) support
+- Document knowledge base management
 - Markdown rendering for responses
 - Code syntax highlighting
 - LaTeX math rendering
@@ -28,6 +30,14 @@ A lightweight web interface for interacting with LM Studio's local API server.
 4. Select a model from the dropdown menu
 5. Start chatting!
 
+### Using RAG (Retrieval-Augmented Generation)
+
+1. Toggle the RAG switch in the top menu to enable RAG functionality
+2. Upload text documents (.txt, .md) to your knowledge base
+3. Ask questions related to your documents
+4. The system will automatically retrieve relevant information and augment the AI's responses
+5. View source documents by clicking "Show sources" in the response
+
 ## Keyboard Shortcuts
 
 - Press `Enter` to send a message
@@ -40,6 +50,10 @@ A lightweight web interface for interacting with LM Studio's local API server.
 - `app.js` - Core application logic
 - `p_editor.html` - Popup text editor
 - `chat/` - Additional chat-related components
+- `rag/` - Retrieval-Augmented Generation components
+  - `rag.js` - Core RAG functionality
+  - `rag-ui.js` - RAG user interface components
+  - `rag-styles.css` - Styling for RAG components
 
 ## Development
 
