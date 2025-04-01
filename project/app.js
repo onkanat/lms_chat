@@ -344,12 +344,123 @@ function createContentDiv(content, isUser) {
     const contentDiv = document.createElement('div');
     contentDiv.classList.add('message-content');
 
-    if (!isUser)
-        contentDiv.innerHTML = marked.parse(content);
-    else
+    if (!isUser) {
+        // Check if the content appears to be JSON
+        if ((content.trim().startsWith('{') && content.trim().endsWith('}')) || 
+            (content.trim().startsWith('[') && content.trim().endsWith(']'))) {
+            try {
+                // Try to parse the JSON
+                const jsonData = JSON.parse(content);
+                
+                // Format the JSON nicely
+                const formattedJson = formatJsonResponse(jsonData);
+                contentDiv.innerHTML = formattedJson;
+            } catch (e) {
+                // If JSON parsing fails, treat as regular markdown
+                console.log("JSON parsing failed, treating as markdown:", e);
+                contentDiv.innerHTML = marked.parse(content);
+            }
+        } else {
+            // Regular markdown parsing
+            contentDiv.innerHTML = marked.parse(content);
+        }
+    } else {
         contentDiv.textContent = content;
+    }
 
     return contentDiv;
+}
+
+// Format JSON responses in a more readable way
+function formatJsonResponse(json) {
+    // For simple key-value objects, create a nice table
+    if (typeof json === 'object' && json !== null && !Array.isArray(json)) {
+        let html = '<div class="json-response">';
+        
+        // Check if it's a nested object with a single key that contains an object
+        const keys = Object.keys(json);
+        if (keys.length === 1 && typeof json[keys[0]] === 'object' && json[keys[0]] !== null) {
+            // Handle case like {"name": {properties...}}
+            const mainKey = keys[0];
+            const nestedObj = json[mainKey];
+            
+            html += `<h3 class="json-title">${escapeHtml(mainKey)}</h3>`;
+            
+            if (typeof nestedObj === 'object') {
+                html += '<table class="json-table">';
+                for (const [key, value] of Object.entries(nestedObj)) {
+                    html += '<tr>';
+                    html += `<td class="json-key">${escapeHtml(key)}</td>`;
+                    html += `<td class="json-value">${formatJsonValue(value)}</td>`;
+                    html += '</tr>';
+                }
+                html += '</table>';
+            } else {
+                html += `<p>${formatJsonValue(nestedObj)}</p>`;
+            }
+        } else {
+            // Regular object with multiple keys
+            html += '<table class="json-table">';
+            for (const [key, value] of Object.entries(json)) {
+                html += '<tr>';
+                html += `<td class="json-key">${escapeHtml(key)}</td>`;
+                html += `<td class="json-value">${formatJsonValue(value)}</td>`;
+                html += '</tr>';
+            }
+            html += '</table>';
+        }
+        
+        html += '</div>';
+        return html;
+    }
+    
+    // For arrays or other types, use a pre-formatted code block with syntax highlighting
+    return `<pre><code class="language-json">${JSON.stringify(json, null, 2)}</code></pre>`;
+}
+
+// Format different types of JSON values appropriately
+function formatJsonValue(value) {
+    if (value === null) return '<span class="json-null">null</span>';
+    
+    if (typeof value === 'string') {
+        // Check if the string is a URL
+        if (value.match(/^https?:\/\/[^\s]+$/)) {
+            return `<a href="${escapeHtml(value)}" target="_blank">${escapeHtml(value)}</a>`;
+        }
+        return escapeHtml(value);
+    }
+    
+    if (typeof value === 'number' || typeof value === 'boolean') {
+        return `<span class="json-${typeof value}">${value}</span>`;
+    }
+    
+    if (Array.isArray(value)) {
+        if (value.length === 0) return '[]';
+        
+        if (typeof value[0] === 'string' || typeof value[0] === 'number' || typeof value[0] === 'boolean') {
+            // Simple array of primitives
+            return value.map(item => formatJsonValue(item)).join(', ');
+        }
+        
+        // Complex array
+        return `[Array with ${value.length} items]`;
+    }
+    
+    if (typeof value === 'object') {
+        return '{...}'; // Simplified representation of nested objects
+    }
+    
+    return String(value);
+}
+
+// Helper function to escape HTML
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 function processCodeBlocksAndMathJax(contentDiv) {

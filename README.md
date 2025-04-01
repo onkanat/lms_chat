@@ -21,6 +21,7 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 
 ### Content Rendering
 - Full Markdown support for rich text formatting
+- Automatic JSON detection and pretty formatting
 - Syntax highlighting for multiple programming languages
 - LaTeX math rendering for equations and formulas
 - Code block formatting with language detection
