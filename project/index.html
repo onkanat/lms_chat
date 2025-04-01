@@ -22,6 +22,7 @@
     
     <!-- Custom Styles and Scripts -->
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="rag/rag-styles.css">
     <title>LM Studio Chat</title>
 </head>
 <body>
@@ -48,6 +49,14 @@
         </div>
     </div>
 
+    <script src="rag/rag.js"></script>
+    <script src="rag/rag-ui.js"></script>
     <script src="app.js"></script>
+    <script>
+        // Initialize RAG UI after page load
+        document.addEventListener('DOMContentLoaded', function() {
+            window.RAGUI.init();
+        });
+    </script>
 </body>
-</html> 
+</html>

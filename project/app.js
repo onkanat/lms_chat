@@ -10,6 +10,7 @@ const modelSelect = document.getElementById('model-select');
 // Global Variables
 let isConnected = false;
 let currentModel = '';
+let chatHistory = []; // Store chat history as an array of message objects
 
 // Marked.js Configuration
 marked.setOptions({
@@ -33,12 +34,24 @@ createSaveButton();
 function handleModelChange(e) {
     currentModel = e.target.value;
     addMessage(`Model changed to: ${currentModel}`, false);
+    
+    // Clear chat history when model changes
+    clearChatHistory();
+}
+
+// Function to clear chat history
+function clearChatHistory() {
+    chatHistory = [];
+    console.log("Chat history cleared");
 }
 
 function connectToServer() {
     const serverUrl = serverUrlInput.value.trim();
     if (!serverUrl) return updateConnectionStatus('Please enter a valid server address', false);
 
+    // Clear chat history when connecting to a server
+    clearChatHistory();
+    
     fetch(`${serverUrl}/v1/models`, { method: 'GET' })
         .then(response => response.json())
         .then(data => handleModelData(serverUrl, data))
@@ -87,36 +100,69 @@ function sendMessage() {
     const message = userInput.value.trim();
     if (!message || !isConnected) return;
 
+    // Add user message to UI
     addMessage(message, true);
+    
+    // Add user message to chat history
+    chatHistory.push({ role: 'user', content: message });
+    
     userInput.value = '';
     sendButton.disabled = true;
+    
+    // Check if RAG is enabled
+    const ragEnabled = document.getElementById('rag-toggle')?.checked || false;
+    let userPrompt = message;
+    let ragContext = null;
+    let messages = [];
+    
+    // Start with system message
+    messages.push({ role: 'system', content: 'I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.' });
+    
+    // If RAG is enabled and we have documents, create a special RAG prompt for the current message
+    if (ragEnabled && window.RAG && window.RAG.getDocumentCount() > 0) {
+        const ragResult = window.RAG.augmentPromptWithRAG(message);
+        userPrompt = ragResult.augmentedPrompt;
+        ragContext = ragResult.context;
+        
+        // Add previous chat history (excluding the last user message which will be replaced with RAG-augmented one)
+        if (chatHistory.length > 1) {
+            messages = messages.concat(chatHistory.slice(0, -1));
+        }
+        
+        // Add the RAG-augmented message
+        messages.push({ role: 'user', content: userPrompt });
+    } else {
+        // No RAG, just use the full chat history
+        messages = messages.concat(chatHistory);
+    }
 
     fetch(`${serverUrlInput.value}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             model: currentModel,
-            messages: [
-                { role: 'system', content: 'I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.' },
-                { role: 'user', content: message }
-            ],
+            messages: messages,
             temperature: 0.8,
             max_tokens: -1,
             stream: false
         })
     })
     .then(response => response.json())
-    .then(data => handleResponseData(message, data))
+    .then(data => handleResponseData(message, data, ragContext))
     .catch(error => handleErrorSend(error));
 }
 
-function handleResponseData(originalMessage, data) {
+function handleResponseData(originalMessage, data, ragContext = null) {
     const botReply = data.choices[0].message.content;
     const totalTokens = data.usage.total_tokens;
     const timeElapsed = ((performance.now() - performance.now()) / 1000).toFixed(2);
     const stopReason = data.choices[0].finish_reason === 'stop' ? 'eosFound' : data.choices[0].finish_reason;
 
-    addMessage(botReply, false, `${totalTokens} tokens • ${timeElapsed}s • Stop: ${stopReason}`);
+    // Add assistant response to chat history
+    chatHistory.push({ role: 'assistant', content: botReply });
+    
+    // Add message to UI
+    addMessage(botReply, false, `${totalTokens} tokens • ${timeElapsed}s • Stop: ${stopReason}`, ragContext);
     sendButton.disabled = false;
 }
 
@@ -135,37 +181,82 @@ function sendMessageKeydown(e) {
 }
 
 function createSaveButton() {
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'chat-buttons';
+    
     const saveButton = document.createElement('button');
     saveButton.textContent = 'Save Chat';
+    saveButton.className = 'save-chat-button';
     saveButton.onclick = saveChat;
-    chatContainer.appendChild(saveButton);
+    
+    const clearButton = document.createElement('button');
+    clearButton.textContent = 'Clear Chat';
+    clearButton.className = 'clear-chat-button';
+    clearButton.onclick = clearChat;
+    
+    buttonContainer.appendChild(saveButton);
+    buttonContainer.appendChild(clearButton);
+    chatContainer.appendChild(buttonContainer);
+}
+
+function clearChat() {
+    // Clear chat history
+    clearChatHistory();
+    
+    // Clear chat UI
+    while (chatContainer.firstChild) {
+        chatContainer.removeChild(chatContainer.firstChild);
+    }
+    
+    // Re-add the buttons
+    createSaveButton();
+    
+    // Add a message indicating the chat was cleared
+    addMessage('Chat history has been cleared.', false);
 }
 
 function saveChat() {
-    const messages = Array.from(chatContainer.querySelectorAll('.message')).map(msg => ({
+    // Get messages from UI
+    const uiMessages = Array.from(chatContainer.querySelectorAll('.message')).map(msg => ({
         author: msg.querySelector('.message-header .header-content')?.innerText || 'Unknown',
         content: msg.querySelector('.message-content')?.innerText || '',
         timestamp: new Date().toISOString()
     }));
 
-    const jsonBlob = new Blob([JSON.stringify(messages, null, 2)], { type: 'application/json' });
+    // Create a combined export with both formats
+    const exportData = {
+        // Format compatible with OpenAI API
+        messages: chatHistory,
+        
+        // UI format with additional metadata
+        ui_messages: uiMessages,
+        
+        // Metadata
+        metadata: {
+            model: currentModel,
+            exported_at: new Date().toISOString(),
+            message_count: chatHistory.length
+        }
+    };
+
+    const jsonBlob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(jsonBlob);
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'chat.json';
+    a.download = 'chat_history.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
 
-function addMessage(content, isUser, metrics = null) {
-    chatContainer.appendChild(createMessageElement(content, isUser, metrics));
+function addMessage(content, isUser, metrics = null, ragContext = null) {
+    chatContainer.appendChild(createMessageElement(content, isUser, metrics, ragContext));
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-function createMessageElement(content, isUser, metrics) {
+function createMessageElement(content, isUser, metrics, ragContext = null) {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', isUser ? 'user-message' : 'assistant-message');
 
@@ -174,6 +265,12 @@ function createMessageElement(content, isUser, metrics) {
 
     messageDiv.appendChild(createHeaderDiv(isUser));
     messageDiv.appendChild(createCopyButton(content));
+    
+    // Add RAG context if available
+    if (!isUser && ragContext && ragContext.length > 0) {
+        messageDiv.appendChild(createRAGContextDiv(ragContext));
+    }
+    
     const contentDiv = createContentDiv(content, isUser);
     processCodeBlocksAndMathJax(contentDiv);
     messageDiv.appendChild(contentDiv);
@@ -182,6 +279,46 @@ function createMessageElement(content, isUser, metrics) {
         messageDiv.appendChild(createMetricsDiv(metrics));
 
     return messageDiv;
+}
+
+function createRAGContextDiv(ragContext) {
+    const contextDiv = document.createElement('div');
+    contextDiv.classList.add('rag-context');
+    
+    const contextHeader = document.createElement('div');
+    contextHeader.classList.add('rag-context-header');
+    
+    const headerText = document.createElement('span');
+    headerText.textContent = `Response augmented with ${ragContext.length} document${ragContext.length > 1 ? 's' : ''}`;
+    
+    const toggleButton = document.createElement('button');
+    toggleButton.classList.add('rag-context-toggle');
+    toggleButton.textContent = 'Show sources';
+    
+    contextHeader.appendChild(headerText);
+    contextHeader.appendChild(toggleButton);
+    
+    const contextContent = document.createElement('div');
+    contextContent.classList.add('rag-context-content');
+    
+    // Add each source document
+    ragContext.forEach(chunk => {
+        const sourceDiv = document.createElement('div');
+        sourceDiv.classList.add('rag-source');
+        sourceDiv.innerHTML = `<strong>${chunk.documentName}</strong>: "${chunk.content.substring(0, 150)}${chunk.content.length > 150 ? '...' : ''}"`;
+        contextContent.appendChild(sourceDiv);
+    });
+    
+    // Toggle visibility of context content
+    toggleButton.addEventListener('click', () => {
+        const isExpanded = contextContent.classList.toggle('expanded');
+        toggleButton.textContent = isExpanded ? 'Hide sources' : 'Show sources';
+    });
+    
+    contextDiv.appendChild(contextHeader);
+    contextDiv.appendChild(contextContent);
+    
+    return contextDiv;
 }
 
 function createModelDiv(model) {
