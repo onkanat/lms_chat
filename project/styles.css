@@ -6,6 +6,7 @@
     --assistant-message-color: #2d2d2d;
     --button-color: #4a90e2;
     --accent-color: #4caf50;
+    --danger-color: #f44336;
 }
 
 body, html {
@@ -86,6 +87,45 @@ body, html {
     padding: 1rem;
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+
+/* Chat Buttons */
+.chat-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0;
+    padding: 5px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+}
+
+.save-chat-button, .clear-chat-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.save-chat-button {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.save-chat-button:hover {
+    background-color: #3d8b40;
+}
+
+.clear-chat-button {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.clear-chat-button:hover {
+    background-color: #d32f2f;
 }
 
 .message {

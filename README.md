@@ -8,6 +8,7 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 - Connect to any LM Studio server by URL (local or remote)
 - Automatic model detection and selection
 - Clean, intuitive chat interface
+- Full chat history support for contextual conversations
 - System message customization
 - Temperature and token limit controls
 
@@ -30,6 +31,7 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 - Dark mode support
 - Message timestamps and token usage statistics
 - Save entire chat history as JSON for later reference
+- Clear chat functionality with a single click
 - Popup text editor for composing complex messages
 
 ## Getting Started
