@@ -246,25 +246,51 @@ Can you also find a specific paper on this topic?
    - Keyboard Navigation: Enables keyboard shortcuts and focus indicators
    - Screen Reader Optimizations: Enhances compatibility with screen readers
 3. Use keyboard shortcuts for efficient navigation:
-   - Alt+A: Open accessibility settings
-   - Alt+P: Open prompt library
-   - Alt+T: Open theme settings
-   - Alt+C: Open conversation manager
-   - Alt+R: Open RAG panel
-   - Alt+E: Open enhanced RAG panel
-   - Alt+S: Focus send button
-   - Alt+I: Focus input field
-   - Alt+M: Focus model selector
+   - ⌘+A (Mac) or Alt+A (Windows/Linux): Open accessibility settings
+   - ⌘+P (Mac) or Alt+P (Windows/Linux): Open prompt library
+   - ⌘+T (Mac) or Alt+T (Windows/Linux): Open theme settings
+   - ⌘+C (Mac) or Alt+C (Windows/Linux): Open conversation manager
+   - ⌘+R (Mac) or Alt+R (Windows/Linux): Open RAG panel
+   - ⌘+E (Mac) or Alt+E (Windows/Linux): Open enhanced RAG panel
+   - ⌘+G (Mac) or Alt+G (Windows/Linux): Open agent panel
+   - ⌘+S (Mac) or Alt+S (Windows/Linux): Focus send button
+   - ⌘+I (Mac) or Alt+I (Windows/Linux): Focus input field
+   - ⌘+M (Mac) or Alt+M (Windows/Linux): Focus model selector
    - Escape: Close open panels
    - Enter: Send message (when input is focused)
 4. All settings are saved automatically and persist between sessions
 
 ## Keyboard Shortcuts
 
+### General
 - `Enter` - Send a message
 - `Shift+Enter` - Add a new line without sending
 - `Cmd+P` (Mac) or `Ctrl+P` (Windows/Linux) - Open popup text editor
 - `Esc` - Close popup dialogs
+
+### Navigation (macOS)
+- `⌘+A` - Open accessibility settings
+- `⌘+P` - Open prompt library
+- `⌘+T` - Open theme settings
+- `⌘+C` - Open conversation manager
+- `⌘+R` - Open RAG panel
+- `⌘+E` - Open enhanced RAG panel
+- `⌘+G` - Open agent panel
+- `⌘+S` - Focus send button
+- `⌘+I` - Focus input field
+- `⌘+M` - Focus model selector
+
+### Navigation (Windows/Linux)
+- `Alt+A` - Open accessibility settings
+- `Alt+P` - Open prompt library
+- `Alt+T` - Open theme settings
+- `Alt+C` - Open conversation manager
+- `Alt+R` - Open RAG panel
+- `Alt+E` - Open enhanced RAG panel
+- `Alt+G` - Open agent panel
+- `Alt+S` - Focus send button
+- `Alt+I` - Focus input field
+- `Alt+M` - Focus model selector
 
 ## Project Structure
 

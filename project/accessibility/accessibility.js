@@ -109,7 +109,8 @@ const Accessibility = {
                     document.getElementById('rag-panel'),
                     document.getElementById('rag-enhanced-panel'),
                     document.getElementById('accessibility-panel'),
-                    document.getElementById('custom-prompt-form-container')
+                    document.getElementById('custom-prompt-form-container'),
+                    document.getElementById('agent-panel')
                 ];
                 
                 for (const panel of panels) {
@@ -127,14 +128,18 @@ const Accessibility = {
                 }
             }
             
-            // Alt+A to open accessibility panel
-            if (e.altKey && e.key === 'a') {
+            // Check for macOS (Command key) or other OS (Alt key)
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const modKey = isMac ? e.metaKey : e.altKey;
+            
+            // Mod+A to open accessibility panel
+            if (modKey && e.key === 'a') {
                 this.toggleAccessibilityPanel();
                 e.preventDefault();
             }
             
-            // Alt+P to open prompt library
-            if (e.altKey && e.key === 'p') {
+            // Mod+P to open prompt library
+            if (modKey && e.key === 'p') {
                 const promptPanel = document.getElementById('prompt-panel');
                 if (promptPanel) {
                     promptPanel.classList.toggle('visible');
@@ -145,8 +150,8 @@ const Accessibility = {
                 e.preventDefault();
             }
             
-            // Alt+T to open theme panel
-            if (e.altKey && e.key === 't') {
+            // Mod+T to open theme panel
+            if (modKey && e.key === 't') {
                 const themePanel = document.getElementById('theme-panel');
                 if (themePanel) {
                     themePanel.classList.toggle('visible');
@@ -154,8 +159,8 @@ const Accessibility = {
                 e.preventDefault();
             }
             
-            // Alt+C to open conversation panel
-            if (e.altKey && e.key === 'c') {
+            // Mod+C to open conversation panel
+            if (modKey && e.key === 'c') {
                 const conversationPanel = document.getElementById('conversation-panel');
                 if (conversationPanel) {
                     conversationPanel.classList.toggle('visible');
@@ -163,8 +168,8 @@ const Accessibility = {
                 e.preventDefault();
             }
             
-            // Alt+R to open RAG panel
-            if (e.altKey && e.key === 'r') {
+            // Mod+R to open RAG panel
+            if (modKey && e.key === 'r') {
                 const ragPanel = document.getElementById('rag-panel');
                 if (ragPanel) {
                     ragPanel.classList.toggle('visible');
@@ -172,8 +177,8 @@ const Accessibility = {
                 e.preventDefault();
             }
             
-            // Alt+E to open enhanced RAG panel
-            if (e.altKey && e.key === 'e') {
+            // Mod+E to open enhanced RAG panel
+            if (modKey && e.key === 'e') {
                 const ragEnhancedPanel = document.getElementById('rag-enhanced-panel');
                 if (ragEnhancedPanel) {
                     ragEnhancedPanel.classList.toggle('visible');
@@ -181,8 +186,8 @@ const Accessibility = {
                 e.preventDefault();
             }
             
-            // Alt+S to focus the send button
-            if (e.altKey && e.key === 's') {
+            // Mod+S to focus the send button
+            if (modKey && e.key === 's') {
                 const sendButton = document.getElementById('send-button');
                 if (sendButton) {
                     sendButton.focus();
@@ -190,8 +195,8 @@ const Accessibility = {
                 e.preventDefault();
             }
             
-            // Alt+I to focus the input field
-            if (e.altKey && e.key === 'i') {
+            // Mod+I to focus the input field
+            if (modKey && e.key === 'i') {
                 const userInput = document.getElementById('user-input');
                 if (userInput) {
                     userInput.focus();
@@ -199,12 +204,21 @@ const Accessibility = {
                 e.preventDefault();
             }
             
-            // Alt+M to toggle the model dropdown
-            if (e.altKey && e.key === 'm') {
+            // Mod+M to toggle the model dropdown
+            if (modKey && e.key === 'm') {
                 const modelSelect = document.getElementById('model-select');
                 if (modelSelect) {
                     modelSelect.focus();
                     modelSelect.click();
+                }
+                e.preventDefault();
+            }
+            
+            // Mod+G to open agent panel
+            if (modKey && e.key === 'g') {
+                const agentPanel = document.getElementById('agent-panel');
+                if (agentPanel) {
+                    agentPanel.classList.toggle('visible');
                 }
                 e.preventDefault();
             }
@@ -382,16 +396,21 @@ const Accessibility = {
         const shortcutsList = document.createElement('ul');
         shortcutsList.className = 'accessibility-shortcuts-list';
         
+        // Detect if user is on macOS
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const modKey = isMac ? '⌘' : 'Alt';
+        
         const shortcuts = [
-            { key: 'Alt+A', description: 'Open accessibility settings' },
-            { key: 'Alt+P', description: 'Open prompt library' },
-            { key: 'Alt+T', description: 'Open theme settings' },
-            { key: 'Alt+C', description: 'Open conversation manager' },
-            { key: 'Alt+R', description: 'Open RAG panel' },
-            { key: 'Alt+E', description: 'Open enhanced RAG panel' },
-            { key: 'Alt+S', description: 'Focus send button' },
-            { key: 'Alt+I', description: 'Focus input field' },
-            { key: 'Alt+M', description: 'Focus model selector' },
+            { key: `${modKey}+A`, description: 'Open accessibility settings' },
+            { key: `${modKey}+P`, description: 'Open prompt library' },
+            { key: `${modKey}+T`, description: 'Open theme settings' },
+            { key: `${modKey}+C`, description: 'Open conversation manager' },
+            { key: `${modKey}+R`, description: 'Open RAG panel' },
+            { key: `${modKey}+E`, description: 'Open enhanced RAG panel' },
+            { key: `${modKey}+G`, description: 'Open agent panel' },
+            { key: `${modKey}+S`, description: 'Focus send button' },
+            { key: `${modKey}+I`, description: 'Focus input field' },
+            { key: `${modKey}+M`, description: 'Focus model selector' },
             { key: 'Escape', description: 'Close open panels' },
             { key: 'Enter', description: 'Send message (when input is focused)' }
         ];
