@@ -43,6 +43,11 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
   - Organize conversations into folders
   - Easily switch between different conversations
   - Automatic tracking of unsaved changes
+- Prompt library:
+  - Categorized prompt templates for different use cases
+  - Custom prompt creation and management
+  - Variable placeholders for flexible prompts
+  - Import/export functionality for sharing prompts
 - Enhanced RAG (Retrieval-Augmented Generation):
   - Client-side vector embeddings using TensorFlow.js
   - Multiple chunking strategies (fixed, paragraph, semantic)
@@ -54,6 +59,12 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
   - Custom color selection for all UI elements
   - Font family and size options
   - Compact and comfortable layout options
+- Accessibility features:
+  - Keyboard navigation with shortcuts
+  - Screen reader compatibility
+  - High contrast mode
+  - Large text option
+  - Reduced motion setting
 - Mobile-optimized interface:
   - Responsive design that works on all screen sizes
   - Touch-friendly controls with larger tap targets
@@ -143,6 +154,25 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 6. Reset to defaults:
    - Click "Reset to Default" to revert to the original dark theme
 
+### Using the Prompt Library
+
+1. Click the prompt library button (📋) next to the send button
+2. Browse through categorized prompt templates:
+   - Writing: Essay outlines, blog posts, creative writing
+   - Programming: Code generation, debugging, algorithm explanations
+   - Education: Concept explanations, lesson plans, quiz generation
+   - Business: Professional emails, business plans, SWOT analysis
+   - Research: Literature reviews, methodology design, data analysis
+3. Click on any prompt to expand it and view details
+4. Fill in any variable fields to customize the prompt
+5. Click "Use Prompt" to insert it into the chat input
+6. Create your own custom prompts:
+   - Click "+ Add Custom Prompt" in the Custom category
+   - Enter a name, description, and prompt text
+   - Use {variable_name} syntax for customizable parts
+   - Add variables with descriptions and default values
+7. Import/export custom prompts to share with others
+
 ### Using Enhanced RAG (Retrieval-Augmented Generation)
 
 1. Toggle the RAG switch in the top menu to enable RAG functionality
@@ -168,6 +198,29 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 7. Toggle RAG off when you want standard responses without document context
 
 > **Note:** All processing happens locally in your browser - no data is sent to external servers for embedding or retrieval.
+
+### Accessibility Features
+
+1. Click the accessibility button (♿) in the top menu to open accessibility settings
+2. Configure accessibility options:
+   - High Contrast Mode: Increases contrast for better visibility
+   - Large Text: Increases text size throughout the application
+   - Reduced Motion: Reduces or eliminates animations and transitions
+   - Keyboard Navigation: Enables keyboard shortcuts and focus indicators
+   - Screen Reader Optimizations: Enhances compatibility with screen readers
+3. Use keyboard shortcuts for efficient navigation:
+   - Alt+A: Open accessibility settings
+   - Alt+P: Open prompt library
+   - Alt+T: Open theme settings
+   - Alt+C: Open conversation manager
+   - Alt+R: Open RAG panel
+   - Alt+E: Open enhanced RAG panel
+   - Alt+S: Focus send button
+   - Alt+I: Focus input field
+   - Alt+M: Focus model selector
+   - Escape: Close open panels
+   - Enter: Send message (when input is focused)
+4. All settings are saved automatically and persist between sessions
 
 ## Keyboard Shortcuts
 
@@ -199,6 +252,13 @@ lms_chat/
 │   │   ├── conversation-manager.js    # Conversation logic
 │   │   ├── conversation-ui.js         # Conversation UI components
 │   │   └── conversation-styles.css    # Conversation styling
+│   ├── prompts/              # Prompt library
+│   │   ├── prompt-library.js          # Prompt management logic
+│   │   ├── prompt-ui.js               # Prompt UI components
+│   │   └── prompt-styles.css          # Prompt styling
+│   ├── accessibility/        # Accessibility features
+│   │   ├── accessibility.js           # Accessibility logic
+│   │   └── accessibility-styles.css   # Accessibility styling
 │   └── themes/               # Theme customization
 │       ├── theme-manager.js  # Theme management logic
 │       ├── theme-ui.js       # Theme UI components
@@ -219,6 +279,11 @@ lms_chat/
 - `rag-enhanced/rag-enhanced-core.js` - Advanced RAG with vector embeddings
 - `rag-enhanced/rag-enhanced-ui.js` - Enhanced RAG UI with document management
 - `rag-enhanced/rag-enhanced-styles.css` - Styling for enhanced RAG interface
+- `prompts/prompt-library.js` - Prompt template management and processing
+- `prompts/prompt-ui.js` - Prompt library UI components
+- `prompts/prompt-styles.css` - Styling for prompt library
+- `accessibility/accessibility.js` - Accessibility features and keyboard navigation
+- `accessibility/accessibility-styles.css` - Accessibility-related styling
 - `conversations/conversation-manager.js` - Conversation saving and loading logic
 - `conversations/conversation-ui.js` - UI for conversation management
 - `conversations/conversation-styles.css` - Styling for conversation components
