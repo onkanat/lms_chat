@@ -6,10 +6,10 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 
 - **Enhanced Prompt Editor**: Completely redesigned with formatting toolbar, templates, and keyboard shortcuts
 - **Improved JSON Response Handling**: Better formatting for structured responses from models like Gemma
-- **Enhanced RAG System**: More reliable PDF processing with fallback mechanisms
+- **Enhanced RAG System**: More reliable PDF processing with fallback mechanisms and improved initialization
 - **Cross-Platform Keyboard Shortcuts**: Optimized for both macOS (⌘) and Windows/Linux (Alt)
 - **Agent System Improvements**: More realistic web search results and better agent response formatting
-- **Bug Fixes**: Resolved various console errors and improved error handling
+- **Bug Fixes**: Resolved double initialization issue with RAG systems and improved error handling
 
 ## Features
 
@@ -214,6 +214,8 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 7. Toggle RAG off when you want standard responses without document context
 
 > **Note:** All processing happens locally in your browser - no data is sent to external servers for embedding or retrieval.
+>
+> **Improved Reliability:** The RAG system now features enhanced initialization with better error handling and fallback mechanisms for PDF processing. The system prevents double initialization issues that could occur in previous versions.
 
 ### Using the Agent System
 

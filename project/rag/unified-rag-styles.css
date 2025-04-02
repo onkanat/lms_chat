@@ -1,0 +1,422 @@
+/* Unified RAG Styles */
+
+/* Toggle Container */
+.unified-rag-toggle-container {
+    display: flex;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.unified-rag-toggle-label {
+    margin-left: 5px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+/* Toggle Switch */
+.unified-rag-toggle {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.unified-rag-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.unified-rag-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--secondary-bg-color);
+    transition: .4s;
+    border-radius: 20px;
+}
+
+.unified-rag-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--text-color);
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.unified-rag-toggle input:checked + .unified-rag-toggle-slider {
+    background-color: var(--accent-color);
+}
+
+.unified-rag-toggle input:checked + .unified-rag-toggle-slider:before {
+    transform: translateX(20px);
+}
+
+/* Panel Button */
+.unified-rag-panel-button {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 18px;
+    cursor: pointer;
+    margin-left: 5px;
+    padding: 0;
+}
+
+.unified-rag-panel-button:hover {
+    color: var(--accent-color);
+}
+
+/* RAG Panel */
+.unified-rag-panel {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 380px;
+    height: 100%;
+    background-color: var(--bg-color);
+    border-left: 1px solid var(--border-color);
+    z-index: 1000;
+    transition: right 0.3s ease;
+    overflow-y: auto;
+    padding: 0;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.unified-rag-panel.visible {
+    right: 0;
+}
+
+/* Panel Header */
+.unified-rag-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--secondary-bg-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.unified-rag-panel-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-color);
+}
+
+.close-panel-button {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.close-panel-button:hover {
+    color: var(--accent-color);
+}
+
+/* Panel Content */
+.unified-rag-panel-content {
+    padding: 15px;
+}
+
+/* Mode Section */
+.unified-rag-mode-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.unified-rag-mode-section h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.unified-rag-mode-select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--secondary-bg-color);
+    color: var(--text-color);
+    border-radius: 4px;
+}
+
+/* Upload Section */
+.unified-rag-upload-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.unified-rag-upload-section.drag-over {
+    border-color: var(--accent-color);
+    background-color: rgba(var(--accent-color-rgb), 0.1);
+}
+
+.unified-rag-upload-section h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.unified-rag-upload-section p {
+    margin-bottom: 15px;
+    color: var(--secondary-text-color);
+    font-size: 14px;
+}
+
+.unified-rag-upload-button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.unified-rag-upload-button:hover {
+    background-color: var(--accent-hover-color);
+}
+
+.unified-rag-upload-info {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--secondary-text-color);
+}
+
+/* Document List */
+.unified-rag-document-list {
+    margin-bottom: 20px;
+}
+
+.unified-rag-document-list h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.unified-rag-document-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background-color: var(--secondary-bg-color);
+}
+
+.unified-rag-document-info {
+    flex: 1;
+}
+
+.unified-rag-document-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.unified-rag-document-meta {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+}
+
+.unified-rag-document-actions {
+    display: flex;
+}
+
+.unified-rag-document-delete {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    margin-left: 10px;
+}
+
+.unified-rag-document-delete:hover {
+    color: var(--danger-hover-color);
+}
+
+.unified-rag-empty-message {
+    padding: 15px;
+    text-align: center;
+    color: var(--secondary-text-color);
+    font-style: italic;
+    border: 1px dashed var(--border-color);
+    border-radius: 4px;
+}
+
+.unified-rag-document-summary {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    text-align: right;
+}
+
+/* Settings Section */
+.unified-rag-settings-section {
+    margin-bottom: 20px;
+}
+
+.unified-rag-settings-section h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.unified-rag-settings-section h5 {
+    margin-top: 15px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.unified-rag-setting-group {
+    margin-bottom: 15px;
+}
+
+.unified-rag-setting-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.unified-rag-setting-group select,
+.unified-rag-setting-group input[type="range"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--secondary-bg-color);
+    color: var(--text-color);
+    border-radius: 4px;
+}
+
+.unified-rag-setting-group input[type="range"] {
+    padding: 0;
+}
+
+.unified-rag-setting-value {
+    display: inline-block;
+    margin-left: 10px;
+    font-size: 14px;
+    color: var(--accent-color);
+}
+
+/* Loading Indicator */
+.unified-rag-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.unified-rag-loading-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(var(--accent-color-rgb), 0.3);
+    border-radius: 50%;
+    border-top-color: var(--accent-color);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* RAG Context in Messages */
+.unified-rag-context {
+    margin-top: 10px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+}
+
+.unified-rag-context-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.unified-rag-context-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--secondary-text-color);
+}
+
+.unified-rag-context-toggle {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+}
+
+.unified-rag-context-toggle:hover {
+    text-decoration: underline;
+}
+
+.unified-rag-context-content {
+    display: none;
+    margin-top: 10px;
+}
+
+.unified-rag-context-content.expanded {
+    display: block;
+}
+
+.unified-rag-source {
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: var(--secondary-bg-color);
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.unified-rag-source-meta {
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--secondary-text-color);
+}
+
+/* Enhanced RAG Settings */
+.unified-rag-enhanced-settings {
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+    margin-top: 15px;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .unified-rag-panel {
+        width: 100%;
+        right: -100%;
+    }
+}

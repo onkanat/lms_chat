@@ -446,9 +446,8 @@ async function sendMessage() {
     // Check if agents are enabled
     const agentsEnabled = window.AgentManager?.getActiveState() || false;
     
-    // Check if RAG is enabled (either standard or enhanced)
-    const ragEnabled = document.getElementById('rag-toggle')?.checked || false;
-    const ragEnhancedEnabled = document.getElementById('rag-enhanced-toggle')?.checked || false;
+    // Check if Unified RAG is enabled
+    const unifiedRagEnabled = document.getElementById('unified-rag-toggle')?.checked || false;
     let userPrompt = message;
     let ragContext = null;
     let messages = [];
@@ -485,20 +484,49 @@ async function sendMessage() {
         }
     }
     
-    // If enhanced RAG is enabled and we have documents, use it
-    if (ragEnhancedEnabled && window.RAGEnhanced && window.RAGEnhanced.getDocumentCount() > 0) {
-        try {
-            // Show loading indicator in the UI
-            addMessage("Retrieving relevant information...", false);
-            
-            // Get augmented prompt from enhanced RAG
-            const ragResult = await window.RAGEnhanced.augmentPromptWithRAG(message);
+    // If Unified RAG is enabled, use it
+    if (unifiedRagEnabled) {
+        // Get the current RAG mode
+        const ragMode = localStorage.getItem('unified-rag-mode') || 'enhanced';
+        
+        // Use Enhanced RAG if selected and available
+        if (ragMode === 'enhanced' && window.RAGEnhanced && window.RAGEnhanced.getDocumentCount() > 0) {
+            try {
+                // Show loading indicator in the UI
+                addMessage("Retrieving relevant information...", false);
+                
+                // Get augmented prompt from enhanced RAG
+                const ragResult = await window.RAGEnhanced.augmentPromptWithRAG(message);
+                userPrompt = ragResult.augmentedPrompt;
+                ragContext = ragResult.context;
+                
+                // Remove the loading message
+                const loadingMessage = chatContainer.lastChild;
+                chatContainer.removeChild(loadingMessage);
+                
+                // Add previous chat history (excluding the last user message which will be replaced with RAG-augmented one)
+                if (chatHistory.length > 1) {
+                    messages = messages.concat(chatHistory.slice(0, -1));
+                }
+                
+                // Add the RAG-augmented message
+                messages.push({ role: 'user', content: userPrompt });
+            } catch (error) {
+                console.error('Error using enhanced RAG:', error);
+                
+                // Remove the loading message
+                const loadingMessage = chatContainer.lastChild;
+                chatContainer.removeChild(loadingMessage);
+                
+                // Fall back to standard behavior
+                messages = messages.concat(chatHistory);
+            }
+        }
+        // Use Basic RAG if selected or if Enhanced RAG is not available
+        else if (window.RAG && window.RAG.getDocumentCount() > 0) {
+            const ragResult = window.RAG.augmentPromptWithRAG(message);
             userPrompt = ragResult.augmentedPrompt;
             ragContext = ragResult.context;
-            
-            // Remove the loading message
-            const loadingMessage = chatContainer.lastChild;
-            chatContainer.removeChild(loadingMessage);
             
             // Add previous chat history (excluding the last user message which will be replaced with RAG-augmented one)
             if (chatHistory.length > 1) {
@@ -507,32 +535,12 @@ async function sendMessage() {
             
             // Add the RAG-augmented message
             messages.push({ role: 'user', content: userPrompt });
-        } catch (error) {
-            console.error('Error using enhanced RAG:', error);
-            
-            // Remove the loading message
-            const loadingMessage = chatContainer.lastChild;
-            chatContainer.removeChild(loadingMessage);
-            
-            // Fall back to standard behavior
+        } else {
+            // No documents available, just use the full chat history
             messages = messages.concat(chatHistory);
         }
-    }
-    // If standard RAG is enabled and we have documents, use it
-    else if (ragEnabled && window.RAG && window.RAG.getDocumentCount() > 0) {
-        const ragResult = window.RAG.augmentPromptWithRAG(message);
-        userPrompt = ragResult.augmentedPrompt;
-        ragContext = ragResult.context;
-        
-        // Add previous chat history (excluding the last user message which will be replaced with RAG-augmented one)
-        if (chatHistory.length > 1) {
-            messages = messages.concat(chatHistory.slice(0, -1));
-        }
-        
-        // Add the RAG-augmented message
-        messages.push({ role: 'user', content: userPrompt });
     } else {
-        // No RAG, just use the full chat history
+        // RAG not enabled, just use the full chat history
         messages = messages.concat(chatHistory);
     }
     
@@ -803,13 +811,23 @@ function createMessageElement(content, isUser, metrics, ragContext = null) {
 }
 
 function createRAGContextDiv(ragContext) {
+    // If no context, return null
+    if (!ragContext || ragContext.length === 0) {
+        return null;
+    }
+    
+    // Use Unified RAG UI if available
+    if (window.UnifiedRAGUI) {
+        return window.UnifiedRAGUI.createRAGContextElement(ragContext);
+    }
+    
     // Check if it's enhanced RAG context (has documentId property)
     if (ragContext[0] && ragContext[0].documentId && window.RAGEnhancedUI) {
         // Use the enhanced RAG UI to create the context element
         return window.RAGEnhancedUI.createRAGContextElement(ragContext);
     }
     
-    // Standard RAG context
+    // Standard RAG context (fallback)
     const contextDiv = document.createElement('div');
     contextDiv.classList.add('rag-context');
     
@@ -1151,9 +1169,8 @@ function initializeRAGSystems() {
     // Debug bilgisi
     console.log("========== RAG Sistemleri Başlatılıyor ==========");
     
-    // Eğer RAG toggle zaten oluşturulduysa tekrar oluşturma
-    const existingRagToggle = document.getElementById('rag-toggle');
-    const existingRagEnhancedToggle = document.getElementById('rag-enhanced-toggle');
+    // Eğer Unified RAG toggle zaten oluşturulduysa tekrar oluşturma
+    const existingUnifiedRagToggle = document.getElementById('unified-rag-toggle-container');
     
     // TensorFlow.js kontrol et
     if (typeof tf !== 'undefined') {
@@ -1169,48 +1186,19 @@ function initializeRAGSystems() {
         console.error("✗ Universal Sentence Encoder yüklenemedi!");
     }
     
-    // Temel RAG sistemini başlat
+    // Birleştirilmiş RAG sistemini başlat
     try {
-        console.log("Temel RAG sistemi başlatılıyor...");
-        if (!existingRagToggle && window.RAGUI && typeof window.RAGUI.init === 'function') {
-            window.RAGUI.init();
-            console.log("✓ RAG sistemi başarıyla başlatıldı");
-        } else if (existingRagToggle) {
-            console.log("⚠️ RAG toggle zaten oluşturulmuş, tekrar oluşturulmayacak");
+        console.log("Birleştirilmiş RAG sistemi başlatılıyor...");
+        if (!existingUnifiedRagToggle && window.UnifiedRAGUI && typeof window.UnifiedRAGUI.init === 'function') {
+            window.UnifiedRAGUI.init();
+            console.log("✓ Birleştirilmiş RAG sistemi başarıyla başlatıldı");
+        } else if (existingUnifiedRagToggle) {
+            console.log("⚠️ Birleştirilmiş RAG toggle zaten oluşturulmuş, tekrar oluşturulmayacak");
         } else {
-            console.error("✗ RAG sistemi bulunamadı veya başlatılamadı");
+            console.error("✗ Birleştirilmiş RAG sistemi bulunamadı veya başlatılamadı");
         }
     } catch (error) {
-        console.error("✗ RAG sistemi başlatılırken hata:", error);
-    }
-    
-    // RAG-Enhanced sistemini başlat (async)
-    try {
-        console.log("RAG-Enhanced sistemi başlatılıyor...");
-        if (!existingRagEnhancedToggle && window.RAGEnhancedUI && typeof window.RAGEnhancedUI.init === 'function') {
-            window.RAGEnhancedUI.init();
-            console.log("✓ RAG-Enhanced UI başarıyla başlatıldı");
-            
-            // 1 saniye sonra RAGEnhanced'ı async olarak başlat
-            setTimeout(async () => {
-                try {
-                    if (window.RAGEnhanced && typeof window.RAGEnhanced.init === 'function') {
-                        await window.RAGEnhanced.init();
-                        console.log("✓ RAG-Enhanced Core başarıyla başlatıldı");
-                    } else {
-                        console.error("✗ RAG-Enhanced Core bulunamadı veya başlatılamadı");
-                    }
-                } catch (enhancedError) {
-                    console.error("✗ RAG-Enhanced Core başlatılırken hata:", enhancedError);
-                }
-            }, 1000);
-        } else if (existingRagEnhancedToggle) {
-            console.log("⚠️ RAG-Enhanced toggle zaten oluşturulmuş, tekrar oluşturulmayacak");
-        } else {
-            console.error("✗ RAG-Enhanced UI bulunamadı veya başlatılamadı");
-        }
-    } catch (error) {
-        console.error("✗ RAG-Enhanced sistemi başlatılırken hata:", error);
+        console.error("✗ Birleştirilmiş RAG sistemi başlatılırken hata:", error);
     }
     
     console.log("============================================");
