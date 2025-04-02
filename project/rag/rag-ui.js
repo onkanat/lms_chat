@@ -8,6 +8,12 @@ function createRAGUI() {
 
 // Create RAG toggle button
 function createRAGToggle() {
+    // Eğer zaten oluşturulduysa tekrar oluşturma
+    if (document.getElementById('rag-toggle-container')) {
+        console.log("RAG toggle zaten oluşturulmuş, tekrarlanmıyor.");
+        return;
+    }
+    
     const serverUrlContainer = document.getElementById('server-url-container');
     if (!serverUrlContainer) return;
     
@@ -117,15 +123,21 @@ function hideDocumentPanel() {
     }
 }
 
-// Initialize RAG UI
-function initRAGUI() {
+// RAG UI başlatma fonksiyonu
+function init() {
+    console.log("Initializing RAG UI...");
     createRAGUI();
-    window.RAG.init();
+    if (window.RAG && typeof window.RAG.init === 'function') {
+        window.RAG.init();
+    } else {
+        console.error('RAG object is not properly defined');
+    }
+    console.log("RAG UI initialized successfully");
 }
 
-// Export functions
+// Export init function
 window.RAGUI = {
-    init: initRAGUI,
+    init,
     showDocumentPanel,
     hideDocumentPanel
 };

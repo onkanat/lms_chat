@@ -4,6 +4,11 @@
 const RAGEnhancedUI = {
     // Initialize the RAG Enhanced UI
     init() {
+        if (typeof document === 'undefined' || !document.createElement) {
+            console.error('No DOM available');
+            return;
+        }
+
         // Create UI elements
         this.createRAGToggle();
         this.createRAGPanel();
@@ -195,6 +200,17 @@ const RAGEnhancedUI = {
     
     // Create the RAG toggle
     createRAGToggle() {
+        // Eğer zaten oluşturulduysa tekrar oluşturma
+        if (document.getElementById('rag-enhanced-toggle-container')) {
+            console.log("RAG-Enhanced toggle zaten oluşturulmuş, tekrarlanmıyor.");
+            return;
+        }
+
+        if (typeof document === 'undefined') {
+            console.error('Document is not available in this environment.');
+            return;
+        }
+
         const serverUrlContainer = document.getElementById('server-url-container');
         if (!serverUrlContainer) return;
         
@@ -238,6 +254,11 @@ const RAGEnhancedUI = {
     
     // Create the RAG panel
     createRAGPanel() {
+        if (typeof document === 'undefined' || !document.createElement) {
+            console.error('No DOM available');
+            return;
+        }
+
         const appContainer = document.getElementById('app');
         if (!appContainer) return;
         
@@ -325,6 +346,11 @@ const RAGEnhancedUI = {
     
     // Create the document list
     createDocumentList() {
+        if (typeof document === 'undefined') {
+            console.error('Document is not available in this environment.');
+            return;
+        }
+
         const section = document.createElement('div');
         section.className = 'rag-enhanced-document-list';
         section.id = 'rag-enhanced-document-list';
@@ -342,8 +368,16 @@ const RAGEnhancedUI = {
     
     // Update the document list
     updateDocumentList(container = null) {
+        if (typeof document === 'undefined' || !document.createElement) {
+            console.error('No DOM available');
+            return;
+        }
+        
         const documentList = container || document.getElementById('rag-enhanced-document-list');
-        if (!documentList) return;
+        if (!documentList) {
+            console.error('Document list element not found.');
+            return;
+        }
         
         // Clear existing items (except the title)
         while (documentList.childNodes.length > 1) {
@@ -351,7 +385,7 @@ const RAGEnhancedUI = {
         }
         
         // Get documents
-        const documents = window.RAGEnhanced.documents;
+        const documents = window.RAGEnhanced.documents || [];
         
         if (documents.length === 0) {
             const emptyMessage = document.createElement('div');
@@ -362,35 +396,35 @@ const RAGEnhancedUI = {
         }
         
         // Add document items
-        for (const document of documents) {
+        for (const doc of documents) {
             const item = document.createElement('div');
             item.className = 'rag-enhanced-document-item';
-            item.dataset.id = document.id;
+            item.dataset.id = doc.id;
             
             const info = document.createElement('div');
             info.className = 'rag-enhanced-document-info';
             
             const name = document.createElement('div');
             name.className = 'rag-enhanced-document-name';
-            name.textContent = document.name;
+            name.textContent = doc.name;
             
             const meta = document.createElement('div');
             meta.className = 'rag-enhanced-document-meta';
             
             // Format file size
             let sizeText = '';
-            if (document.size < 1024) {
-                sizeText = `${document.size} B`;
-            } else if (document.size < 1024 * 1024) {
-                sizeText = `${(document.size / 1024).toFixed(1)} KB`;
+            if (doc.size < 1024) {
+                sizeText = `${doc.size} B`;
+            } else if (doc.size < 1024 * 1024) {
+                sizeText = `${(doc.size / 1024).toFixed(1)} KB`;
             } else {
-                sizeText = `${(document.size / (1024 * 1024)).toFixed(1)} MB`;
+                sizeText = `${(doc.size / (1024 * 1024)).toFixed(1)} MB`;
             }
             
             // Get chunk count
-            const chunkCount = window.RAGEnhanced.chunks.filter(chunk => chunk.documentId === document.id).length;
+            const chunkCount = window.RAGEnhanced.chunks?.filter(chunk => chunk.documentId === doc.id).length || 0;
             
-            meta.textContent = `${sizeText} • ${chunkCount} chunks • Added ${new Date(document.dateAdded).toLocaleDateString()}`;
+            meta.textContent = `${sizeText} • ${chunkCount} chunks • Added ${new Date(doc.dateAdded).toLocaleDateString()}`;
             
             info.appendChild(name);
             info.appendChild(meta);
@@ -403,8 +437,8 @@ const RAGEnhancedUI = {
             deleteButton.innerHTML = '🗑️';
             deleteButton.title = 'Delete document';
             deleteButton.addEventListener('click', () => {
-                if (confirm(`Delete document "${document.name}"?`)) {
-                    window.RAGEnhanced.deleteDocument(document.id);
+                if (confirm(`Delete document "${doc.name}"?`)) {
+                    window.RAGEnhanced.deleteDocument(doc.id);
                     this.updateDocumentList();
                 }
             });
@@ -665,21 +699,25 @@ const RAGEnhancedUI = {
     
     // Handle file upload
     async handleFileUpload(files) {
+        if (!files || files.length === 0) {
+            console.error('No files provided for upload.');
+            return;
+        }
+
         try {
             // Show loading indicator
             this.showLoading();
             
             // Process each file
-            for (const file of files) {
-                // Check file type
-                if (!this.isFileTypeSupported(file.type)) {
-                    alert(`File type not supported: ${file.type}`);
-                    continue;
+            Array.from(files).forEach((file) => {
+                if (!['application/pdf', 'text/plain', 'text/markdown'].includes(file.type)) {
+                    console.error('Unsupported file type:', file.type);
+                    return;
                 }
-                
+
                 // Add document
-                await window.RAGEnhanced.addDocument(file);
-            }
+                window.RAGEnhanced.addDocument(file);
+            });
             
             // Update document list
             this.updateDocumentList();

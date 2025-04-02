@@ -1,914 +1,551 @@
 // Enhanced RAG Core Implementation
-// Provides advanced document processing, embedding, and retrieval capabilities
 
-// Main RAG Enhanced object
 const RAGEnhanced = {
-    // State
+    // Veritabanı
     documents: [],
     chunks: [],
-    embeddings: null,
-    embeddingModel: null,
+    embeddings: {},
     isModelLoaded: false,
-    isProcessing: false,
+    embeddingModel: null,
     
-    // Settings
+    // Ayarlar
     settings: {
-        chunkingStrategy: 'paragraph', // 'fixed', 'paragraph', 'semantic'
         chunkSize: 500,
         chunkOverlap: 100,
-        topK: 5,
-        similarityThreshold: 0.7,
-        retrievalStrategy: 'hybrid', // 'keyword', 'semantic', 'hybrid'
+        chunkingStrategy: 'fixed',
+        retrievalStrategy: 'hybrid',
+        topK: 3,
+        similarityThreshold: 0.5,
         keywordWeight: 0.3,
         semanticWeight: 0.7
     },
     
-    // Initialize the RAG Enhanced system
+    // Başlatma
     async init() {
-        console.log('Initializing RAG Enhanced...');
+        console.log('RAG-Enhanced başlatılıyor...');
         
-        // Load saved documents from localStorage
-        this.loadDocuments();
-        
-        // Load saved settings from localStorage
-        this.loadSettings();
-        
-        // Preload PDF.js if not already loaded
         try {
-            if (typeof pdfjsLib === 'undefined') {
-                console.log('Preloading PDF.js...');
+            // TensorFlow yüklenmiş mi kontrol et
+            if (typeof tf === 'undefined') {
+                console.error('TensorFlow.js bulunamadı! Sayfaya TensorFlow.js dahil edildiğinden emin olun.');
+                throw new Error('TensorFlow.js bulunamadı');
+            }
+            console.log('TensorFlow.js bulundu:', tf.version.tfjs);
+            
+            // Yerel depodan verileri yükle
+            this.loadFromLocalStorage();
+            
+            // Embedding modelini yükle
+            await this.loadEmbeddingModel();
+            
+            // Eğer önceden yüklenmiş belgeler varsa ve embeddingler yoksa, embeddingleri oluştur
+            if (this.chunks.length > 0 && Object.keys(this.embeddings).length === 0) {
+                console.log('Varolan belgeler için embeddingler oluşturuluyor...');
+                await this.rebuildAllEmbeddings();
+            }
+            
+            console.log('RAG-Enhanced başarıyla başlatıldı');
+        } catch (error) {
+            console.error('RAG-Enhanced başlatılırken hata:', error);
+            alert('RAG sistemini başlatırken sorun oluştu: ' + error.message);
+        }
+    },
+    
+    // Embedding modelini yükleme
+    async loadEmbeddingModel() {
+        if (this.isModelLoaded && this.embeddingModel) {
+            console.log('Embedding modeli zaten yüklü');
+            return;
+        }
+        
+        try {
+            console.log('Embedding modeli yükleniyor...');
+            
+            // Universal Sentence Encoder yüklenmemiş mi kontrol et
+            if (typeof use === 'undefined') {
+                console.warn('Universal Sentence Encoder bulunamadı, TFHub üzerinden yükleniyor...');
                 
-                // Check if PDF.js is already being loaded
-                const existingScript = document.querySelector('script[src*="pdf.js"]');
-                if (!existingScript) {
-                    await new Promise((resolve) => {
-                        const script = document.createElement('script');
-                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js';
-                        script.integrity = 'sha512-9jr6up8aB+1pH0xHKX5h5mwuJkCrj1rJwGSHZEy5V+rPLhJQoVLs5UUCKgn5qwKLuNxHzYqLxZXMXbQVFkOZCg==';
-                        script.crossOrigin = 'anonymous';
-                        script.referrerPolicy = 'no-referrer';
-                        
-                        script.onload = () => {
-                            // Set worker path after loading
-                            if (typeof pdfjsLib !== 'undefined') {
-                                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
-                                console.log('PDF.js preloaded successfully');
-                            }
-                            resolve();
-                        };
-                        
-                        script.onerror = () => {
-                            console.warn('Failed to preload PDF.js, will load on demand if needed');
-                            resolve(); // Continue initialization even if PDF.js fails to load
-                        };
-                        
-                        document.head.appendChild(script);
-                    });
-                } else {
-                    console.log('PDF.js is already being loaded');
+                // TFHub'dan modeli doğrudan yüklemeyi dene
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder';
+                script.async = true;
+                
+                await new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+                
+                if (typeof use === 'undefined') {
+                    throw new Error('Universal Sentence Encoder yüklenemedi');
                 }
-            } else {
-                console.log('PDF.js is already loaded');
             }
-        } catch (error) {
-            console.warn('Error preloading PDF.js:', error);
-            // Continue initialization even if PDF.js fails to load
-        }
-        
-        // Initialize the embedding model
-        try {
-            await this.initEmbeddingModel();
-            console.log('RAG Enhanced initialized successfully');
-        } catch (error) {
-            console.error('Error initializing RAG Enhanced:', error);
-        }
-    },
-    
-    // Load the embedding model
-    async initEmbeddingModel() {
-        try {
-            // We'll use a simple Universal Sentence Encoder (USE) model
-            // This is a lightweight model that works well for text embeddings
-            this.isModelLoaded = false;
-            this.useSimpleEmbeddings = false;
             
-            // Load the model from a more reliable CDN source
-            console.log('Loading embedding model...');
+            console.log('Universal Sentence Encoder yüklemeye hazır.');
+            
+            // Doğrudan yüklemeyi dene
             try {
-                // First try to load from TensorFlow Hub
-                this.embeddingModel = await tf.loadGraphModel(
-                    'https://tfhub.dev/tensorflow/tfjs-model/universal-sentence-encoder/1/default/1',
-                    { fromTFHub: true }
-                );
-            } catch (error) {
-                console.warn('Failed to load from TensorFlow Hub, trying alternative source:', error);
-                
-                // Fallback to a simpler model that's more likely to load
-                this.embeddingModel = await tf.sequential({
-                    layers: [
-                        tf.layers.embedding({
-                            inputDim: 10000,  // Vocabulary size
-                            outputDim: 100,   // Embedding dimension
-                            inputLength: 1
-                        }),
-                        tf.layers.flatten()
-                    ]
-                });
-                
-                // Compile the model
-                this.embeddingModel.compile({
-                    optimizer: 'adam',
-                    loss: 'categoricalCrossentropy',
-                    metrics: ['accuracy']
-                });
-                
-                console.log('Using simplified embedding model');
+                console.log('USE doğrudan yükleniyor...');
+                this.embeddingModel = await use.load();
+                console.log('USE başarıyla yüklendi!');
+                this.isModelLoaded = true;
+                return;
+            } catch (directError) {
+                console.warn('Doğrudan yükleme başarısız:', directError);
             }
             
-            this.isModelLoaded = true;
-            console.log('Embedding model loaded successfully');
+            // CORS proxy ile yüklemeyi dene
+            const corsProxies = [
+                'https://corsproxy.io/?',
+                'https://api.allorigins.win/raw?url=',
+                'https://crossorigin.me/',
+                'https://cors-anywhere.herokuapp.com/'
+            ];
             
-            // Process any existing documents
-            if (this.documents.length > 0) {
-                await this.processAllDocuments();
+            for (const proxyUrl of corsProxies) {
+                try {
+                    console.log(`${proxyUrl} proxy'si ile model yükleniyor...`);
+                    const modelUrl = `${proxyUrl}https://tfhub.dev/google/universal-sentence-encoder/4`;
+                    
+                    // TF Hub model URL'sini proxy URL'si ile değiştir
+                    this.embeddingModel = await use.load(modelUrl);
+                    console.log(`${proxyUrl} kullanılarak model başarıyla yüklendi!`);
+                    this.isModelLoaded = true;
+                    return;
+                } catch (proxyError) {
+                    console.warn(`${proxyUrl} ile yükleme başarısız:`, proxyError);
+                }
             }
             
-            return true;
+            throw new Error('Hiçbir yöntemle embedding modeli yüklenemedi');
+            
         } catch (error) {
-            console.error('Error loading embedding model:', error);
-            
-            // Fallback to a simpler approach if the model fails to load
-            console.log('Using fallback embedding approach...');
-            this.useSimpleEmbeddings = true;
-            this.isModelLoaded = true;
-            
-            // Process any existing documents with the fallback approach
-            if (this.documents.length > 0) {
-                await this.processAllDocuments();
-            }
-            
-            return true;
+            console.error('Embedding modeli yüklenemedi:', error);
+            throw error;
         }
     },
     
-    // Save settings to localStorage
-    saveSettings() {
-        try {
-            localStorage.setItem('rag_enhanced_settings', JSON.stringify(this.settings));
-        } catch (error) {
-            console.error('Error saving RAG Enhanced settings:', error);
-        }
-    },
-    
-    // Load settings from localStorage
-    loadSettings() {
-        try {
-            const savedSettings = localStorage.getItem('rag_enhanced_settings');
-            if (savedSettings) {
-                this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
-            }
-        } catch (error) {
-            console.error('Error loading RAG Enhanced settings:', error);
-        }
-    },
-    
-    // Update a setting
-    updateSetting(key, value) {
-        if (key in this.settings) {
-            this.settings[key] = value;
-            this.saveSettings();
-            
-            // If chunking settings changed, reprocess documents
-            if (['chunkingStrategy', 'chunkSize', 'chunkOverlap'].includes(key)) {
-                this.processAllDocuments();
-            }
-            
-            return true;
-        }
-        return false;
-    },
-    
-    // Save documents to localStorage
-    saveDocuments() {
-        try {
-            // Only save document metadata, not the full content or embeddings
-            const documentsToSave = this.documents.map(doc => ({
-                id: doc.id,
-                name: doc.name,
-                type: doc.type,
-                size: doc.size,
-                dateAdded: doc.dateAdded,
-                metadata: doc.metadata
-            }));
-            
-            localStorage.setItem('rag_enhanced_documents', JSON.stringify(documentsToSave));
-            
-            // Save chunks separately
-            localStorage.setItem('rag_enhanced_chunks', JSON.stringify(this.chunks));
-        } catch (error) {
-            console.error('Error saving RAG Enhanced documents:', error);
-        }
-    },
-    
-    // Load documents from localStorage
-    loadDocuments() {
-        try {
-            // Load document metadata
-            const savedDocuments = localStorage.getItem('rag_enhanced_documents');
-            if (savedDocuments) {
-                this.documents = JSON.parse(savedDocuments);
-            }
-            
-            // Load chunks
-            const savedChunks = localStorage.getItem('rag_enhanced_chunks');
-            if (savedChunks) {
-                this.chunks = JSON.parse(savedChunks);
-            }
-        } catch (error) {
-            console.error('Error loading RAG Enhanced documents:', error);
-            this.documents = [];
-            this.chunks = [];
-        }
-    },
-    
-    // Get the number of documents
-    getDocumentCount() {
-        return this.documents.length;
-    },
-    
-    // Get the number of chunks
-    getChunkCount() {
-        return this.chunks.length;
-    },
-    
-    // Add a document
+    // Belge ekleme
     async addDocument(file) {
         try {
-            this.isProcessing = true;
+            console.log(`"${file.name}" belgesi ekleniyor...`);
             
-            // Extract text based on file type
-            const text = await this.extractTextFromFile(file);
+            // Dosyayı oku
+            const content = await this.readFileContent(file);
             
-            if (!text) {
-                throw new Error('Could not extract text from file');
-            }
-            
-            // Create document object
+            // Belge oluştur
+            const docId = this.generateId();
             const document = {
-                id: 'doc-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5),
+                id: docId,
                 name: file.name,
-                type: file.type,
                 size: file.size,
-                dateAdded: new Date().toISOString(),
-                content: text,
-                metadata: {
-                    wordCount: text.split(/\s+/).length,
-                    charCount: text.length
-                }
+                type: file.type,
+                dateAdded: new Date().toISOString()
             };
             
-            // Add document to collection
+            // Belgeyi kaydet
             this.documents.push(document);
             
-            // Process the document (chunk and embed)
-            await this.processDocument(document);
+            // Belgeyi parçala
+            const chunks = await this.chunkDocument(docId, file.name, content);
+            this.chunks.push(...chunks);
             
-            // Save to localStorage
-            this.saveDocuments();
+            // Parçaları embed et
+            await this.embedChunks(chunks);
             
-            this.isProcessing = false;
-            return document.id;
+            // Değişiklikleri kaydet
+            this.saveToLocalStorage();
+            
+            console.log(`"${file.name}" belgesi eklendi ve ${chunks.length} parça embed edildi`);
+            return docId;
         } catch (error) {
-            console.error('Error adding document:', error);
-            this.isProcessing = false;
+            console.error('Belge eklenirken hata:', error);
             throw error;
         }
     },
     
-    // Extract text from a file based on its type
-    async extractTextFromFile(file) {
-        const reader = new FileReader();
+    // Dosya içeriğini okuma
+    async readFileContent(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(new Error('Dosya okunamadı: ' + e.target.error));
+            reader.readAsText(file);
+        });
+    },
+    
+    // Belgeyi parçala
+    async chunkDocument(docId, docName, content) {
+        console.log(`"${docName}" belgesi parçalanıyor... (Strateji: ${this.settings.chunkingStrategy})`);
         
-        // Handle different file types
-        if (file.type === 'application/pdf') {
-            // PDF file
-            return new Promise((resolve, reject) => {
-                reader.onload = async function(event) {
-                    try {
-                        // Check if PDF.js is available
-                        if (typeof pdfjsLib === 'undefined') {
-                            // Load PDF.js dynamically if not available
-                            console.log('PDF.js not loaded, loading it now...');
-                            
-                            // Check if PDF.js is already being loaded
-                            const existingScript = document.querySelector('script[src*="pdf.js"]');
-                            if (!existingScript) {
-                                await new Promise((resolveScript) => {
-                                    const script = document.createElement('script');
-                                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js';
-                                    script.integrity = 'sha512-9jr6up8aB+1pH0xHKX5h5mwuJkCrj1rJwGSHZEy5V+rPLhJQoVLs5UUCKgn5qwKLuNxHzYqLxZXMXbQVFkOZCg==';
-                                    script.crossOrigin = 'anonymous';
-                                    script.referrerPolicy = 'no-referrer';
-                                    
-                                    script.onload = () => {
-                                        // Set worker path after loading
-                                        if (typeof pdfjsLib !== 'undefined') {
-                                            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
-                                            console.log('PDF.js loaded successfully');
-                                        }
-                                        resolveScript();
-                                    };
-                                    
-                                    script.onerror = () => {
-                                        console.warn('Failed to load PDF.js, falling back to text extraction');
-                                        resolveScript();
-                                    };
-                                    
-                                    document.head.appendChild(script);
-                                });
-                            } else {
-                                // Wait a bit for the existing script to finish loading
-                                await new Promise(resolve => setTimeout(resolve, 500));
-                            }
-                        }
-                        
-                        // If PDF.js is still not available, fall back to a simple text extraction
-                        if (typeof pdfjsLib === 'undefined') {
-                            throw new Error('PDF.js not available, using fallback text extraction');
-                        }
-                        
-                        const typedArray = new Uint8Array(event.target.result);
-                        const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
-                        
-                        let text = '';
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const content = await page.getTextContent();
-                            const pageText = content.items.map(item => item.str).join(' ');
-                            text += pageText + '\n\n';
-                        }
-                        
-                        resolve(text);
-                    } catch (error) {
-                        console.error('Error extracting text from PDF:', error);
-                        
-                        // Fallback to basic text extraction if PDF.js fails
-                        try {
-                            console.log('Using fallback text extraction for PDF');
-                            // Create a new FileReader for text extraction
-                            const textReader = new FileReader();
-                            textReader.onload = function(e) {
-                                try {
-                                    // Try to extract some text from the binary data
-                                    const binaryData = new Uint8Array(e.target.result);
-                                    let text = '';
-                                    
-                                    // Extract ASCII text from the PDF binary data
-                                    // This is a very basic approach that won't work perfectly
-                                    // but might extract some readable text
-                                    for (let i = 0; i < binaryData.length; i++) {
-                                        const charCode = binaryData[i];
-                                        // Only include printable ASCII characters
-                                        if (charCode >= 32 && charCode <= 126) {
-                                            text += String.fromCharCode(charCode);
-                                        } else if (charCode === 10 || charCode === 13) {
-                                            // Add newlines
-                                            text += '\n';
-                                        }
-                                    }
-                                    
-                                    // Clean up the extracted text
-                                    text = text.replace(/[^\w\s.,;:!?'"()[\]{}\/\\-]/g, ' ')
-                                             .replace(/\s+/g, ' ')
-                                             .trim();
-                                    
-                                    if (text.length > 100) {
-                                        resolve(text);
-                                    } else {
-                                        // If we couldn't extract meaningful text, use the filename
-                                        resolve(`Content from PDF file: ${file.name}. Text extraction failed.`);
-                                    }
-                                } catch (err) {
-                                    console.error('Fallback text extraction failed:', err);
-                                    resolve(`Content from PDF file: ${file.name}. Text extraction failed.`);
-                                }
-                            };
-                            textReader.onerror = function() {
-                                resolve(`Content from PDF file: ${file.name}. Text extraction failed.`);
-                            };
-                            textReader.readAsArrayBuffer(file);
-                        } catch (fallbackError) {
-                            console.error('Fallback extraction failed:', fallbackError);
-                            reject(error);
-                        }
-                    }
-                };
-                reader.onerror = function(error) {
-                    console.error('Error reading file:', error);
-                    reject(error);
-                };
-                reader.readAsArrayBuffer(file);
-            });
-        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            // DOCX file
-            return new Promise((resolve, reject) => {
-                reader.onload = async function(event) {
-                    try {
-                        const arrayBuffer = event.target.result;
-                        const result = await mammoth.extractRawText({ arrayBuffer });
-                        resolve(result.value);
-                    } catch (error) {
-                        reject(error);
-                    }
-                };
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(file);
-            });
-        } else if (file.type === 'text/plain' || file.type === 'text/markdown') {
-            // Text or Markdown file
-            return new Promise((resolve, reject) => {
-                reader.onload = function(event) {
-                    resolve(event.target.result);
-                };
-                reader.onerror = reject;
-                reader.readAsText(file);
-            });
-        } else {
-            // Unsupported file type
-            throw new Error(`Unsupported file type: ${file.type}`);
-        }
-    },
-    
-    // Process a document (chunk and embed)
-    async processDocument(document) {
-        try {
-            // Chunk the document
-            const documentChunks = this.chunkDocument(document);
-            
-            // Add chunks to collection
-            this.chunks.push(...documentChunks);
-            
-            // Generate embeddings if model is loaded
-            if (this.isModelLoaded) {
-                await this.generateEmbeddings(documentChunks);
-            }
-            
-            return documentChunks.length;
-        } catch (error) {
-            console.error('Error processing document:', error);
-            throw error;
-        }
-    },
-    
-    // Process all documents
-    async processAllDocuments() {
-        try {
-            this.isProcessing = true;
-            
-            // Clear existing chunks
-            this.chunks = [];
-            
-            // Process each document
-            for (const document of this.documents) {
-                await this.processDocument(document);
-            }
-            
-            // Save to localStorage
-            this.saveDocuments();
-            
-            this.isProcessing = false;
-            return true;
-        } catch (error) {
-            console.error('Error processing all documents:', error);
-            this.isProcessing = false;
-            throw error;
-        }
-    },
-    
-    // Chunk a document based on the selected strategy
-    chunkDocument(document) {
-        const { chunkingStrategy, chunkSize, chunkOverlap } = this.settings;
-        const text = document.content;
         const chunks = [];
         
-        if (chunkingStrategy === 'fixed') {
-            // Fixed-size chunking
-            let i = 0;
-            while (i < text.length) {
-                const chunk = text.substr(i, chunkSize);
-                chunks.push({
-                    id: `chunk-${document.id}-${i}`,
-                    documentId: document.id,
-                    documentName: document.name,
-                    content: chunk,
-                    startIndex: i,
-                    endIndex: i + chunk.length,
-                    embedding: null
-                });
-                i += chunkSize - chunkOverlap;
-            }
-        } else if (chunkingStrategy === 'paragraph') {
-            // Paragraph-based chunking
-            const paragraphs = text.split(/\\n\\s*\\n/);
-            let currentChunk = '';
-            let startIndex = 0;
-            
-            for (const paragraph of paragraphs) {
-                if (currentChunk.length + paragraph.length > chunkSize && currentChunk.length > 0) {
-                    // Add current chunk
-                    chunks.push({
-                        id: `chunk-${document.id}-${startIndex}`,
-                        documentId: document.id,
-                        documentName: document.name,
-                        content: currentChunk,
-                        startIndex,
-                        endIndex: startIndex + currentChunk.length,
-                        embedding: null
-                    });
+        // Parçalama stratejisine göre parçala
+        switch (this.settings.chunkingStrategy) {
+            case 'paragraph':
+                // Paragraf bazlı parçalama
+                const paragraphs = content.split(/\n\s*\n/);
+                for (let i = 0; i < paragraphs.length; i++) {
+                    const para = paragraphs[i].trim();
+                    if (para.length < 20) continue; // Çok kısa paragrafları atla
                     
-                    // Start new chunk with overlap
-                    const words = currentChunk.split(/\\s+/);
-                    const overlapWords = words.slice(-Math.floor(chunkOverlap / 5)); // Approximate word count
-                    currentChunk = overlapWords.join(' ') + ' ' + paragraph;
-                    startIndex = startIndex + currentChunk.length - overlapWords.join(' ').length;
-                } else {
-                    // Add paragraph to current chunk
-                    if (currentChunk.length > 0) {
-                        currentChunk += '\\n\\n';
-                    }
-                    currentChunk += paragraph;
+                    chunks.push({
+                        id: `${docId}-chunk-${i}`,
+                        documentId: docId,
+                        documentName: docName,
+                        content: para,
+                        startPos: i,
+                        endPos: i
+                    });
                 }
-            }
-            
-            // Add the last chunk if not empty
-            if (currentChunk.length > 0) {
-                chunks.push({
-                    id: `chunk-${document.id}-${startIndex}`,
-                    documentId: document.id,
-                    documentName: document.name,
-                    content: currentChunk,
-                    startIndex,
-                    endIndex: startIndex + currentChunk.length,
-                    embedding: null
-                });
-            }
-        } else if (chunkingStrategy === 'semantic') {
-            // Semantic chunking (simplified version)
-            // In a real implementation, this would use more sophisticated methods
-            // to identify semantic boundaries like section headers, topic changes, etc.
-            
-            // For now, we'll use a combination of paragraph and sentence boundaries
-            const paragraphs = text.split(/\\n\\s*\\n/);
-            let currentChunk = '';
-            let startIndex = 0;
-            
-            for (const paragraph of paragraphs) {
-                // Split paragraph into sentences
-                const sentences = paragraph.split(/(?<=[.!?])\\s+/);
+                break;
                 
-                for (const sentence of sentences) {
-                    if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
-                        // Add current chunk
-                        chunks.push({
-                            id: `chunk-${document.id}-${startIndex}`,
-                            documentId: document.id,
-                            documentName: document.name,
-                            content: currentChunk,
-                            startIndex,
-                            endIndex: startIndex + currentChunk.length,
-                            embedding: null
-                        });
-                        
-                        // Start new chunk with overlap
-                        const words = currentChunk.split(/\\s+/);
-                        const overlapWords = words.slice(-Math.floor(chunkOverlap / 5));
-                        currentChunk = overlapWords.join(' ') + ' ' + sentence;
-                        startIndex = startIndex + currentChunk.length - overlapWords.join(' ').length;
-                    } else {
-                        // Add sentence to current chunk
-                        if (currentChunk.length > 0 && !currentChunk.endsWith(' ')) {
-                            currentChunk += ' ';
-                        }
-                        currentChunk += sentence;
-                    }
-                }
+            case 'fixed':
+            default:
+                // Sabit boyutlu parçalama (varsayılan)
+                const chunkSize = this.settings.chunkSize;
+                const overlap = this.settings.chunkOverlap;
                 
-                // Add paragraph break
-                if (currentChunk.length > 0) {
-                    currentChunk += '\\n\\n';
+                for (let i = 0; i < content.length; i += (chunkSize - overlap)) {
+                    const chunkText = content.substr(i, chunkSize);
+                    if (chunkText.length < 50) continue; // Çok kısa parçaları atla
+                    
+                    chunks.push({
+                        id: `${docId}-chunk-${chunks.length}`,
+                        documentId: docId,
+                        documentName: docName,
+                        content: chunkText,
+                        startPos: i,
+                        endPos: i + chunkText.length
+                    });
                 }
-            }
-            
-            // Add the last chunk if not empty
-            if (currentChunk.length > 0) {
-                chunks.push({
-                    id: `chunk-${document.id}-${startIndex}`,
-                    documentId: document.id,
-                    documentName: document.name,
-                    content: currentChunk,
-                    startIndex,
-                    endIndex: startIndex + currentChunk.length,
-                    embedding: null
-                });
-            }
         }
         
+        console.log(`"${docName}" belgesi için ${chunks.length} parça oluşturuldu`);
         return chunks;
     },
     
-    // Generate embeddings for chunks
-    async generateEmbeddings(chunks) {
+    // Parçaları embed etme
+    async embedChunks(chunks) {
+        if (!this.isModelLoaded || !this.embeddingModel) {
+            await this.loadEmbeddingModel();
+        }
+        
         if (!this.isModelLoaded) {
-            throw new Error('Embedding model not loaded');
+            throw new Error('Embedding modeli yüklenemedi');
+        }
+        
+        console.log(`${chunks.length} parça embed ediliyor...`);
+        
+        // Parça içeriklerini hazırla
+        const texts = chunks.map(chunk => chunk.content);
+        
+        // Progres göster
+        let processed = 0;
+        const total = chunks.length;
+        const batchSize = 5; // Bellek sorunlarını önlemek için küçük gruplar halinde işle
+        
+        for (let i = 0; i < texts.length; i += batchSize) {
+            const batch = texts.slice(i, i + batchSize);
+            
+            try {
+                // Universal Sentence Encoder kullanarak embeddingler oluştur
+                const embeddings = await this.embeddingModel.embed(batch);
+                
+                // Embedding vektörlerini çıkar (tf.Tensor'dan JavaScript dizisine dönüştür)
+                const embeddingValues = await embeddings.array();
+                
+                // Her parça için embedding'i depola
+                for (let j = 0; j < batch.length; j++) {
+                    const chunkIndex = i + j;
+                    const chunkId = chunks[chunkIndex].id;
+                    this.embeddings[chunkId] = embeddingValues[j];
+                }
+                
+                processed += batch.length;
+                console.log(`Embed ilerlemesi: ${processed}/${total} (${Math.round(processed/total*100)}%)`);
+                
+                // Tensor'ı temizle
+                embeddings.dispose();
+            } catch (error) {
+                console.error('Batch embed ederken hata:', error);
+                throw error;
+            }
+        }
+        
+        console.log(`${texts.length} parça başarıyla embed edildi`);
+        
+        // Embedding boyutunu kontrol et
+        const sampleEmbeddingId = Object.keys(this.embeddings)[0];
+        if (sampleEmbeddingId) {
+            const embeddingDim = this.embeddings[sampleEmbeddingId].length;
+            console.log(`Embedding boyutu: ${embeddingDim}`);
+        }
+    },
+    
+    // Tüm embeddinglari yeniden oluştur
+    async rebuildAllEmbeddings() {
+        if (this.chunks.length === 0) {
+            console.log('Embedding oluşturulacak hiç belge parçası yok');
+            return;
         }
         
         try {
-            // Process in batches to avoid memory issues
-            const batchSize = 10;
-            for (let i = 0; i < chunks.length; i += batchSize) {
-                const batch = chunks.slice(i, i + batchSize);
-                const texts = batch.map(chunk => chunk.content);
-                
-                if (this.useSimpleEmbeddings) {
-                    // Use a simple fallback approach for embeddings
-                    // This creates a basic TF-IDF like representation
-                    console.log('Using simple embeddings for batch', i);
-                    
-                    // Create a simple word frequency vector for each text
-                    const embeddings = texts.map(text => {
-                        // Normalize text: lowercase, remove punctuation, split into words
-                        const words = text.toLowerCase()
-                            .replace(/[^\w\s]/g, '')
-                            .split(/\s+/)
-                            .filter(word => word.length > 2); // Filter out short words
-                        
-                        // Count word frequencies
-                        const wordFreq = {};
-                        words.forEach(word => {
-                            wordFreq[word] = (wordFreq[word] || 0) + 1;
-                        });
-                        
-                        // Create a simple embedding (just the word frequencies as a sparse vector)
-                        // For simplicity, we'll use the top 100 most frequent words
-                        const entries = Object.entries(wordFreq)
-                            .sort((a, b) => b[1] - a[1])
-                            .slice(0, 100);
-                        
-                        // Create a simple hash of the words to use as embedding
-                        const embedding = new Array(100).fill(0);
-                        entries.forEach(([word, count], index) => {
-                            // Simple hash of the word
-                            const hash = this.simpleHash(word) % 100;
-                            embedding[hash] = count / words.length; // Normalize by text length
-                        });
-                        
-                        return embedding;
-                    });
-                    
-                    // Store embeddings in chunks
-                    for (let j = 0; j < batch.length; j++) {
-                        batch[j].embedding = embeddings[j];
-                    }
-                } else {
-                    // Use the TensorFlow.js model for embeddings
-                    console.log('Using TensorFlow model for embeddings');
-                    
-                    // Generate embeddings using Universal Sentence Encoder
-                    const embeddings = [];
-                    
-                    for (const text of texts) {
-                        try {
-                            // Convert text to tensor and get embedding
-                            const textTensor = tf.tensor1d([text], 'string');
-                            const result = this.embeddingModel.predict(textTensor);
-                            
-                            // Get the embedding data
-                            const embedding = Array.from(await result.data());
-                            
-                            // Clean up tensors
-                            textTensor.dispose();
-                            result.dispose();
-                            
-                            embeddings.push(embedding);
-                        } catch (error) {
-                            console.error('Error generating embedding for text, using fallback:', error);
-                            // Fallback to simple embedding for this text
-                            this.useSimpleEmbeddings = true;
-                            const fallbackEmbedding = this.generateSimpleEmbedding(text);
-                            embeddings.push(fallbackEmbedding);
-                        }
-                    }
-                    
-                    // Store embeddings in chunks
-                    for (let j = 0; j < batch.length; j++) {
-                        batch[j].embedding = embeddings[j];
-                    }
-                }
-            }
+            console.log(`Tüm parçalar için embeddingler yeniden oluşturuluyor... (${this.chunks.length} parça)`);
             
-            return true;
+            // Embeddingler temizlenir
+            this.embeddings = {};
+            
+            // Tüm parçaları embed et
+            await this.embedChunks(this.chunks);
+            
+            // Değişiklikleri kaydet
+            this.saveToLocalStorage();
+            
+            console.log('Tüm embeddingler yeniden oluşturuldu');
         } catch (error) {
-            console.error('Error generating embeddings:', error);
+            console.error('Embeddingler yeniden oluşturulurken hata:', error);
             throw error;
         }
     },
     
-    // Delete a document
-    deleteDocument(documentId) {
-        // Find the document
-        const documentIndex = this.documents.findIndex(doc => doc.id === documentId);
-        if (documentIndex === -1) {
-            return false;
-        }
-        
-        // Remove the document
-        this.documents.splice(documentIndex, 1);
-        
-        // Remove associated chunks
-        this.chunks = this.chunks.filter(chunk => chunk.documentId !== documentId);
-        
-        // Save to localStorage
-        this.saveDocuments();
-        
-        return true;
-    },
-    
-    // Augment a prompt with RAG context
-    async augmentPromptWithRAG(prompt) {
-        if (this.chunks.length === 0) {
-            return {
-                augmentedPrompt: prompt,
-                context: []
-            };
-        }
+    // Prompt'u RAG ile zenginleştir
+    async augmentPromptWithRAG(query) {
+        console.log('RAG zenginleştirmesi başlatılıyor...');
         
         try {
-            // Get relevant chunks
-            const relevantChunks = await this.retrieveRelevantChunks(prompt);
+            // Alakalı parçaları al
+            const relevantChunks = await this.retrieveRelevantChunks(query);
             
             if (relevantChunks.length === 0) {
+                console.log('İlgili belge parçası bulunamadı');
                 return {
-                    augmentedPrompt: prompt,
+                    augmentedPrompt: query,
+                    usedRAG: false,
                     context: []
                 };
             }
             
-            // Create context string
-            const contextString = relevantChunks
-                .map(chunk => `Document: ${chunk.documentName}\nContent: ${chunk.content}\n`)
-                .join('\n');
+            console.log(`${relevantChunks.length} ilgili parça bulundu`);
             
-            // Create augmented prompt
-            const augmentedPrompt = `I need information about the following: ${prompt}\n\nHere is some relevant context to help you answer:\n\n${contextString}\n\nBased on the above context, please answer: ${prompt}`;
+            // Bağlamı formatla
+            const context = relevantChunks
+                .map(item => `Belge: ${item.chunk.documentName}\n${item.chunk.content}\n(Benzerlik: ${(item.score * 100).toFixed(1)}%)\n`)
+                .join('\n---\n\n');
+            
+            // Zenginleştirilmiş prompt
+            const augmentedPrompt = 
+                `Aşağıdaki bağlam bilgilerini kullanarak soruyu yanıtla:\n\n${context}\n\n` +
+                `Bu bağlam bilgilerini dikkate alarak şu soruyu yanıtla:\n${query}\n\n` +
+                `Not: Bağlam bilgilerini kullanarak yanıt ver, bağlam dışı bilgi verme.`;
             
             return {
-                augmentedPrompt,
-                context: relevantChunks
+                augmentedPrompt: augmentedPrompt,
+                usedRAG: true,
+                context: relevantChunks.map(item => ({
+                    ...item.chunk,
+                    score: item.score
+                }))
             };
         } catch (error) {
-            console.error('Error augmenting prompt with RAG:', error);
-            return {
-                augmentedPrompt: prompt,
-                context: []
-            };
+            console.error('RAG zenginleştirmesi sırasında hata:', error);
+            throw error;
         }
     },
     
-    // Retrieve relevant chunks for a query
+    // İlgili parçaları getir
     async retrieveRelevantChunks(query) {
-        const { retrievalStrategy, topK, similarityThreshold, keywordWeight, semanticWeight } = this.settings;
+        if (this.chunks.length === 0) {
+            console.warn('Sistemde hiç belge parçası yok');
+            return [];
+        }
+        
+        if (Object.keys(this.embeddings).length === 0) {
+            console.warn('Embeddingler oluşturulmamış');
+            return [];
+        }
+        
+        if (!this.isModelLoaded) {
+            await this.loadEmbeddingModel();
+        }
+        
+        const strategy = this.settings.retrievalStrategy;
+        console.log(`İlgili parçalar getiriliyor... (Strateji: ${strategy})`);
         
         try {
-            let relevantChunks = [];
+            let scoredChunks = [];
             
-            if (retrievalStrategy === 'keyword' || retrievalStrategy === 'hybrid') {
-                // Keyword-based retrieval
-                const keywordChunks = this.retrieveByKeywords(query);
-                
-                if (retrievalStrategy === 'keyword') {
-                    relevantChunks = keywordChunks;
-                } else {
-                    // Store for hybrid approach
-                    relevantChunks = keywordChunks.map(chunk => ({
-                        ...chunk,
-                        score: chunk.score * keywordWeight
-                    }));
-                }
-            }
-            
-            if (retrievalStrategy === 'semantic' || retrievalStrategy === 'hybrid') {
-                // Semantic retrieval (if model is loaded)
-                if (this.isModelLoaded && this.embeddingModel) {
-                    const semanticChunks = await this.retrieveBySimilarity(query);
+            switch (strategy) {
+                case 'semantic':
+                    scoredChunks = await this.semanticSearch(query);
+                    break;
                     
-                    if (retrievalStrategy === 'semantic') {
-                        relevantChunks = semanticChunks;
-                    } else {
-                        // Hybrid approach: combine keyword and semantic results
-                        const semanticScored = semanticChunks.map(chunk => ({
-                            ...chunk,
-                            score: chunk.score * semanticWeight
-                        }));
-                        
-                        // Merge results
-                        const allChunks = [...relevantChunks, ...semanticScored];
-                        
-                        // Group by chunk ID and sum scores
-                        const chunkMap = new Map();
-                        for (const chunk of allChunks) {
-                            if (chunkMap.has(chunk.id)) {
-                                const existing = chunkMap.get(chunk.id);
-                                existing.score += chunk.score;
-                            } else {
-                                chunkMap.set(chunk.id, { ...chunk });
-                            }
+                case 'keyword':
+                    scoredChunks = this.keywordSearch(query);
+                    break;
+                    
+                case 'hybrid':
+                default:
+                    // Karma arama: Anahtar kelime + Semantik
+                    const keywordResults = this.keywordSearch(query);
+                    const semanticResults = await this.semanticSearch(query);
+                    
+                    // Sonuçları birleştir
+                    const combinedResults = new Map();
+                    
+                    // Anahtar kelime sonuçlarını ekle
+                    keywordResults.forEach(item => {
+                        combinedResults.set(item.chunk.id, {
+                            chunk: item.chunk,
+                            keywordScore: item.score,
+                            semanticScore: 0
+                        });
+                    });
+                    
+                    // Semantik sonuçları ekle veya güncelle
+                    semanticResults.forEach(item => {
+                        if (combinedResults.has(item.chunk.id)) {
+                            const existing = combinedResults.get(item.chunk.id);
+                            existing.semanticScore = item.score;
+                        } else {
+                            combinedResults.set(item.chunk.id, {
+                                chunk: item.chunk,
+                                keywordScore: 0,
+                                semanticScore: item.score
+                            });
                         }
-                        
-                        relevantChunks = Array.from(chunkMap.values());
-                    }
-                } else if (retrievalStrategy === 'semantic') {
-                    // Fall back to keyword if semantic is not available
-                    relevantChunks = this.retrieveByKeywords(query);
-                }
+                    });
+                    
+                    // Ağırlıklı skorları hesapla
+                    const keywordWeight = this.settings.keywordWeight;
+                    const semanticWeight = this.settings.semanticWeight;
+                    
+                    scoredChunks = Array.from(combinedResults.values()).map(item => ({
+                        chunk: item.chunk,
+                        score: (item.keywordScore * keywordWeight) + (item.semanticScore * semanticWeight)
+                    }));
+                    break;
             }
             
-            // Sort by score (descending)
-            relevantChunks.sort((a, b) => b.score - a.score);
+            // Skor eşiğini uygula
+            scoredChunks = scoredChunks.filter(item => item.score >= this.settings.similarityThreshold);
             
-            // Filter by threshold
-            relevantChunks = relevantChunks.filter(chunk => chunk.score >= similarityThreshold);
-            
-            // Limit to top K
-            relevantChunks = relevantChunks.slice(0, topK);
-            
-            return relevantChunks;
+            // Skora göre sırala ve en yüksek K sonucu al
+            return scoredChunks
+                .sort((a, b) => b.score - a.score)
+                .slice(0, this.settings.topK);
+                
         } catch (error) {
-            console.error('Error retrieving relevant chunks:', error);
+            console.error('İlgili parçalar getirilirken hata:', error);
+            // Hata durumunda boş dizi döndür
             return [];
         }
     },
     
-    // Retrieve chunks by keyword matching
-    retrieveByKeywords(query) {
-        // Tokenize query
-        const queryTokens = query.toLowerCase().split(/\\W+/).filter(token => token.length > 2);
+    // Anahtar kelime araması
+    keywordSearch(query) {
+        console.log('Anahtar kelime araması yapılıyor...');
         
-        // Score each chunk
+        // Basit anahtar kelime tabanlı arama
+        const queryTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 3);
+        
+        // Term frekansına göre her parçaya puan ver
         const scoredChunks = this.chunks.map(chunk => {
-            const content = chunk.content.toLowerCase();
+            const chunkText = chunk.content.toLowerCase();
             let score = 0;
+            let matchCount = 0;
             
-            // Count matches for each token
-            for (const token of queryTokens) {
-                const regex = new RegExp(token, 'g');
-                const matches = content.match(regex);
+            queryTerms.forEach(term => {
+                const regex = new RegExp(term, 'g');
+                const matches = chunkText.match(regex);
                 if (matches) {
-                    score += matches.length;
+                    matchCount++;
+                    score += matches.length * (term.length / 10); // Uzun terimler daha önemli
                 }
-            }
+            });
             
-            // Normalize by content length
-            score = score / (content.length / 100);
+            // Queryterms'in ne kadarı eşleşti hesabı
+            const coverage = queryTerms.length > 0 ? matchCount / queryTerms.length : 0;
+            score = score * (0.5 + 0.5 * coverage); // Daha fazla terim eşleşmesine önem ver
             
-            return { ...chunk, score };
+            // Normalize et (0-1 aralığına getir)
+            score = Math.min(1, score / (queryTerms.length * 2));
+            
+            return { chunk, score };
         });
         
-        // Filter out zero scores
-        return scoredChunks.filter(chunk => chunk.score > 0);
+        console.log(`Anahtar kelime araması tamamlandı: ${scoredChunks.length} sonuç`);
+        return scoredChunks.filter(item => item.score > 0);
     },
     
-    // Retrieve chunks by embedding similarity
-    async retrieveBySimilarity(query) {
-        if (!this.isModelLoaded || !this.embeddingModel) {
-            throw new Error('Embedding model not loaded');
+    // Semantik arama
+    async semanticSearch(query) {
+        if (!this.isModelLoaded) {
+            throw new Error('Embedding modeli yüklenemedi');
         }
         
+        console.log('Semantik arama yapılıyor...');
+        
         try {
-            // Generate query embedding
-            const queryEmbedding = await this.embeddingModel.embed([query]);
-            const queryVector = Array.from(queryEmbedding.dataSync());
+            // Query embeddingi oluştur
+            const queryEmbedding = await this.createEmbedding(query);
             
-            // Free memory
-            queryEmbedding.dispose();
+            if (!queryEmbedding) {
+                throw new Error('Query embedding oluşturulamadı');
+            }
             
-            // Score each chunk by cosine similarity
-            const scoredChunks = this.chunks
-                .filter(chunk => chunk.embedding) // Only consider chunks with embeddings
-                .map(chunk => {
-                    const similarity = this.cosineSimilarity(queryVector, chunk.embedding);
-                    return { ...chunk, score: similarity };
-                });
+            // Her parça için benzerlik hesapla
+            const scoredChunks = await Promise.all(this.chunks.map(async chunk => {
+                const chunkId = chunk.id;
+                const chunkEmbedding = this.embeddings[chunkId];
+                
+                if (!chunkEmbedding) {
+                    console.warn(`${chunkId} için embedding bulunamadı`);
+                    return { chunk, score: 0 };
+                }
+                
+                // Kosinüs benzerliği hesapla
+                const similarityScore = this.cosineSimilarity(queryEmbedding, chunkEmbedding);
+                
+                return {
+                    chunk,
+                    score: similarityScore
+                };
+            }));
             
+            console.log(`Semantik arama tamamlandı: ${scoredChunks.length} sonuç`);
             return scoredChunks;
+            
         } catch (error) {
-            console.error('Error retrieving by similarity:', error);
-            return [];
+            console.error('Semantik arama sırasında hata:', error);
+            throw error;
         }
     },
     
-    // Calculate cosine similarity between two vectors
-    cosineSimilarity(vecA, vecB) {
-        if (!vecA || !vecB || vecA.length !== vecB.length) {
+    // Embedding oluştur
+    async createEmbedding(text) {
+        try {
+            if (!this.isModelLoaded || !this.embeddingModel) {
+                await this.loadEmbeddingModel();
+            }
+            
+            // Universal Sentence Encoder kullanarak embedding oluştur
+            const embedding = await this.embeddingModel.embed(text);
+            const embeddingArray = await embedding.array();
+            
+            // Tensor'ı temizle
+            embedding.dispose();
+            
+            return embeddingArray[0];
+        } catch (error) {
+            console.error('Embedding oluşturulurken hata:', error);
+            return null;
+        }
+    },
+    
+    // Kosinüs benzerliği hesaplama
+    cosineSimilarity(vectorA, vectorB) {
+        if (!vectorA || !vectorB || vectorA.length !== vectorB.length) {
             return 0;
         }
         
@@ -916,61 +553,139 @@ const RAGEnhanced = {
         let normA = 0;
         let normB = 0;
         
-        for (let i = 0; i < vecA.length; i++) {
-            dotProduct += vecA[i] * vecB[i];
-            normA += vecA[i] * vecA[i];
-            normB += vecB[i] * vecB[i];
+        for (let i = 0; i < vectorA.length; i++) {
+            dotProduct += vectorA[i] * vectorB[i];
+            normA += vectorA[i] * vectorA[i];
+            normB += vectorB[i] * vectorB[i];
         }
+        
+        normA = Math.sqrt(normA);
+        normB = Math.sqrt(normB);
         
         if (normA === 0 || normB === 0) {
             return 0;
         }
         
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        return dotProduct / (normA * normB);
     },
     
-    // Simple hash function for strings
-    simpleHash(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
+    // Yerel depoya kaydet
+    saveToLocalStorage() {
+        try {
+            // Belgeleri ve parçaları kaydet
+            localStorage.setItem('rag_enhanced_documents', JSON.stringify(this.documents));
+            localStorage.setItem('rag_enhanced_chunks', JSON.stringify(this.chunks));
+            
+            // Embeddinglari kaydet (çok büyük olabilir, limitlerle ilgili dikkatli olmalı)
+            try {
+                localStorage.setItem('rag_enhanced_embeddings', JSON.stringify(this.embeddings));
+                console.log('Embeddingler kaydedildi');
+            } catch (embeddingError) {
+                console.warn('Embeddingler kaydedilemedi, muhtemelen çok büyük:', embeddingError);
+                // Embeddingler kaydedilemedi, bir dahaki sefere yeniden oluşturulmaları gerekecek
+            }
+            
+            // Ayarları kaydet
+            localStorage.setItem('rag_enhanced_settings', JSON.stringify(this.settings));
+            
+            console.log('Veriler yerel depoya kaydedildi');
+        } catch (error) {
+            console.error('Veriler yerel depoya kaydedilemedi:', error);
         }
-        return Math.abs(hash);
     },
     
-    // Generate a simple embedding for text when TensorFlow model fails
-    generateSimpleEmbedding(text) {
-        // Normalize text: lowercase, remove punctuation, split into words
-        const words = text.toLowerCase()
-            .replace(/[^\w\s]/g, '')
-            .split(/\s+/)
-            .filter(word => word.length > 2); // Filter out short words
+    // Yerel depodan yükle
+    loadFromLocalStorage() {
+        try {
+            // Belgeleri yükle
+            const savedDocuments = localStorage.getItem('rag_enhanced_documents');
+            if (savedDocuments) {
+                this.documents = JSON.parse(savedDocuments);
+                console.log(`${this.documents.length} belge yüklendi`);
+            }
+            
+            // Parçaları yükle
+            const savedChunks = localStorage.getItem('rag_enhanced_chunks');
+            if (savedChunks) {
+                this.chunks = JSON.parse(savedChunks);
+                console.log(`${this.chunks.length} belge parçası yüklendi`);
+            }
+            
+            // Embeddinglari yükle
+            const savedEmbeddings = localStorage.getItem('rag_enhanced_embeddings');
+            if (savedEmbeddings) {
+                try {
+                    this.embeddings = JSON.parse(savedEmbeddings);
+                    console.log(`${Object.keys(this.embeddings).length} embedding yüklendi`);
+                    
+                    // Embedding boyutunu kontrol et
+                    const sampleEmbeddingId = Object.keys(this.embeddings)[0];
+                    if (sampleEmbeddingId) {
+                        const embeddingDim = this.embeddings[sampleEmbeddingId].length;
+                        console.log(`Embedding boyutu: ${embeddingDim}`);
+                    }
+                } catch (embeddingError) {
+                    console.warn('Embeddingler yüklenemedi:', embeddingError);
+                    this.embeddings = {};
+                }
+            }
+            
+            // Ayarları yükle
+            const savedSettings = localStorage.getItem('rag_enhanced_settings');
+            if (savedSettings) {
+                this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
+                console.log('Ayarlar yüklendi');
+            }
+            
+        } catch (error) {
+            console.error('Veriler yerel depodan yüklenemedi:', error);
+        }
+    },
+    
+    // Yardımcı fonksiyonlar
+    generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substring(2);
+    },
+    
+    deleteDocument(docId) {
+        // Belgeyi sil
+        this.documents = this.documents.filter(doc => doc.id !== docId);
         
-        // Count word frequencies
-        const wordFreq = {};
-        words.forEach(word => {
-            wordFreq[word] = (wordFreq[word] || 0) + 1;
+        // Silinen belgenin parçalarını bul
+        const chunksToDelete = this.chunks.filter(chunk => chunk.documentId === docId);
+        
+        // Parçaları sil
+        this.chunks = this.chunks.filter(chunk => chunk.documentId !== docId);
+        
+        // Embeddinglari sil
+        chunksToDelete.forEach(chunk => {
+            delete this.embeddings[chunk.id];
         });
         
-        // Create a simple embedding (just the word frequencies as a sparse vector)
-        // For simplicity, we'll use the top 100 most frequent words
-        const entries = Object.entries(wordFreq)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 100);
+        // Değişiklikleri kaydet
+        this.saveToLocalStorage();
         
-        // Create a simple hash of the words to use as embedding
-        const embedding = new Array(100).fill(0);
-        entries.forEach(([word, count], index) => {
-            // Simple hash of the word
-            const hash = this.simpleHash(word) % 100;
-            embedding[hash] = count / words.length; // Normalize by text length
-        });
-        
-        return embedding;
+        console.log(`${docId} ID'li belge ve ilgili parçalar silindi`);
+    },
+    
+    getChunkCount() {
+        return this.chunks.length;
+    },
+    
+    getDocumentCount() {
+        return this.documents.length;
+    },
+    
+    updateSetting(key, value) {
+        if (key in this.settings) {
+            this.settings[key] = value;
+            this.saveToLocalStorage();
+            console.log(`Ayar güncellendi: ${key} = ${value}`);
+            return true;
+        }
+        return false;
     }
 };
 
-// Export the RAG Enhanced object
+// RAGEnhanced'ı global olarak dışa aktar
 window.RAGEnhanced = RAGEnhanced;

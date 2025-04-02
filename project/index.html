@@ -33,6 +33,10 @@
         });
     </script>
     
+    <!-- TensorFlow.js ve USE kütüphaneleri - RAG için gerekli -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder"></script>
+    
     <!-- Custom Styles and Scripts -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="rag/rag-styles.css">
@@ -169,13 +173,7 @@
             if (window.ThemeManager) window.ThemeManager.init();
             if (window.ThemeUI) window.ThemeUI.init();
             
-            // Initialize RAG components
-            if (window.RAGUI) window.RAGUI.init();
-            if (window.RAGEnhanced) {
-                window.RAGEnhanced.init().then(() => {
-                    if (window.RAGEnhancedUI) window.RAGEnhancedUI.init();
-                }).catch(err => console.error('Error initializing RAG Enhanced:', err));
-            }
+            // RAG kodları kaldırıldı - app.js içinde tek bir yerden başlatılacak
             
             // Initialize conversation components
             if (window.ConversationUI) window.ConversationUI.init();

@@ -697,7 +697,13 @@ function sendMessageKeydown(e) {
     if (e.key === 'Enter') sendMessage();
 }
 
+// Create save button ONLY if it doesn't already exist
 function createSaveButton() {
+    // Check if buttons already exist
+    if (document.querySelector('.chat-buttons')) {
+        return; // Buttons already exist, don't create again
+    }
+    
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'chat-buttons';
     
@@ -742,13 +748,8 @@ function saveChat() {
 
     // Create a combined export with both formats
     const exportData = {
-        // Format compatible with OpenAI API
         messages: chatHistory,
-        
-        // UI format with additional metadata
         ui_messages: uiMessages,
-        
-        // Metadata
         metadata: {
             model: currentModel,
             exported_at: new Date().toISOString(),
@@ -1143,4 +1144,88 @@ window.addEventListener('message', function(event) {
     const text = event.data;
     const userInput = document.getElementById('user-input');
     userInput.value = text;
-}); 
+});
+
+// RAG sistemlerini başlatma fonksiyonu
+function initializeRAGSystems() {
+    // Debug bilgisi
+    console.log("========== RAG Sistemleri Başlatılıyor ==========");
+    
+    // Eğer RAG toggle zaten oluşturulduysa tekrar oluşturma
+    const existingRagToggle = document.getElementById('rag-toggle');
+    const existingRagEnhancedToggle = document.getElementById('rag-enhanced-toggle');
+    
+    // TensorFlow.js kontrol et
+    if (typeof tf !== 'undefined') {
+        console.log("✓ TensorFlow.js yüklendi:", tf.version.tfjs);
+    } else {
+        console.error("✗ TensorFlow.js yüklenemedi!");
+    }
+    
+    // Universal Sentence Encoder kontrol et
+    if (typeof use !== 'undefined') {
+        console.log("✓ Universal Sentence Encoder yüklendi");
+    } else {
+        console.error("✗ Universal Sentence Encoder yüklenemedi!");
+    }
+    
+    // Temel RAG sistemini başlat
+    try {
+        console.log("Temel RAG sistemi başlatılıyor...");
+        if (!existingRagToggle && window.RAGUI && typeof window.RAGUI.init === 'function') {
+            window.RAGUI.init();
+            console.log("✓ RAG sistemi başarıyla başlatıldı");
+        } else if (existingRagToggle) {
+            console.log("⚠️ RAG toggle zaten oluşturulmuş, tekrar oluşturulmayacak");
+        } else {
+            console.error("✗ RAG sistemi bulunamadı veya başlatılamadı");
+        }
+    } catch (error) {
+        console.error("✗ RAG sistemi başlatılırken hata:", error);
+    }
+    
+    // RAG-Enhanced sistemini başlat (async)
+    try {
+        console.log("RAG-Enhanced sistemi başlatılıyor...");
+        if (!existingRagEnhancedToggle && window.RAGEnhancedUI && typeof window.RAGEnhancedUI.init === 'function') {
+            window.RAGEnhancedUI.init();
+            console.log("✓ RAG-Enhanced UI başarıyla başlatıldı");
+            
+            // 1 saniye sonra RAGEnhanced'ı async olarak başlat
+            setTimeout(async () => {
+                try {
+                    if (window.RAGEnhanced && typeof window.RAGEnhanced.init === 'function') {
+                        await window.RAGEnhanced.init();
+                        console.log("✓ RAG-Enhanced Core başarıyla başlatıldı");
+                    } else {
+                        console.error("✗ RAG-Enhanced Core bulunamadı veya başlatılamadı");
+                    }
+                } catch (enhancedError) {
+                    console.error("✗ RAG-Enhanced Core başlatılırken hata:", enhancedError);
+                }
+            }, 1000);
+        } else if (existingRagEnhancedToggle) {
+            console.log("⚠️ RAG-Enhanced toggle zaten oluşturulmuş, tekrar oluşturulmayacak");
+        } else {
+            console.error("✗ RAG-Enhanced UI bulunamadı veya başlatılamadı");
+        }
+    } catch (error) {
+        console.error("✗ RAG-Enhanced sistemi başlatılırken hata:", error);
+    }
+    
+    console.log("============================================");
+}
+
+function initializeApp() {  
+    // Temel UI bileşenlerini başlat
+    serverUrlInput.focus();
+    createSaveButton();
+    loadSavedModelParams();
+    populateModelTemplates();
+    
+    // RAG sistemlerini başlat
+    setTimeout(initializeRAGSystems, 500);
+}
+
+// Uygulama başlatıldığında çağrı yap
+document.addEventListener('DOMContentLoaded', initializeApp);

@@ -7,9 +7,10 @@ const documentStore = {
 };
 
 // Initialize RAG system
-function initRAG() {
+function init() {
     console.log("Initializing RAG system...");
     loadDocumentsFromLocalStorage();
+    console.log("RAG system initialized successfully");
 }
 
 // Save documents to localStorage
@@ -244,7 +245,7 @@ function augmentPromptWithRAG(userMessage) {
 
 // Export functions
 window.RAG = {
-    init: initRAG,
+    init,
     handleFileUpload,
     updateDocumentList,
     removeDocument,
