@@ -12,6 +12,19 @@ let isConnected = false;
 let currentModel = '';
 let chatHistory = []; // Store chat history as an array of message objects
 
+// Model parameters with default values
+const defaultModelParams = {
+    temperature: 0.8,
+    top_p: 1.0,
+    frequency_penalty: 0.0,
+    presence_penalty: 0.0,
+    max_tokens: -1,
+    system_prompt: 'I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.'
+};
+
+// Current model parameters (initialized with defaults)
+let modelParams = { ...defaultModelParams };
+
 // Marked.js Configuration
 marked.setOptions({
     gfm: true,
@@ -26,9 +39,21 @@ userInput.addEventListener('keypress', sendMessageKeydown);
 sendButton.addEventListener('click', sendMessage);
 modelSelect.addEventListener('change', handleModelChange);
 
+// Model Parameters Event Listeners
+document.getElementById('model-params-toggle').addEventListener('click', toggleModelParamsPanel);
+document.getElementById('temperature-slider').addEventListener('input', updateTemperature);
+document.getElementById('top-p-slider').addEventListener('input', updateTopP);
+document.getElementById('frequency-penalty-slider').addEventListener('input', updateFrequencyPenalty);
+document.getElementById('presence-penalty-slider').addEventListener('input', updatePresencePenalty);
+document.getElementById('max-tokens-input').addEventListener('input', updateMaxTokens);
+document.getElementById('system-prompt-textarea').addEventListener('input', updateSystemPrompt);
+document.getElementById('reset-params-button').addEventListener('click', resetModelParams);
+document.getElementById('save-params-button').addEventListener('click', saveModelParams);
+
 // Initial Setup
 serverUrlInput.focus();
 createSaveButton();
+loadSavedModelParams();
 
 // Functions
 function handleModelChange(e) {
@@ -96,6 +121,111 @@ function updateConnectionStatus(message, connected) {
     sendButton.disabled = !connected;
 }
 
+// Model Parameters Functions
+function toggleModelParamsPanel() {
+    const panel = document.getElementById('model-params-panel');
+    panel.classList.toggle('visible');
+}
+
+function updateTemperature(e) {
+    const value = parseFloat(e.target.value);
+    document.getElementById('temperature-value').textContent = value.toFixed(1);
+    modelParams.temperature = value;
+}
+
+function updateTopP(e) {
+    const value = parseFloat(e.target.value);
+    document.getElementById('top-p-value').textContent = value.toFixed(2);
+    modelParams.top_p = value;
+}
+
+function updateFrequencyPenalty(e) {
+    const value = parseFloat(e.target.value);
+    document.getElementById('frequency-penalty-value').textContent = value.toFixed(1);
+    modelParams.frequency_penalty = value;
+}
+
+function updatePresencePenalty(e) {
+    const value = parseFloat(e.target.value);
+    document.getElementById('presence-penalty-value').textContent = value.toFixed(1);
+    modelParams.presence_penalty = value;
+}
+
+function updateMaxTokens(e) {
+    const value = parseInt(e.target.value);
+    const displayValue = value === -1 ? "-1 (unlimited)" : value;
+    document.getElementById('max-tokens-value').textContent = displayValue;
+    modelParams.max_tokens = value;
+}
+
+function updateSystemPrompt(e) {
+    modelParams.system_prompt = e.target.value;
+}
+
+function resetModelParams() {
+    // Reset to default values
+    modelParams = { ...defaultModelParams };
+    
+    // Update UI
+    document.getElementById('temperature-slider').value = modelParams.temperature;
+    document.getElementById('temperature-value').textContent = modelParams.temperature.toFixed(1);
+    
+    document.getElementById('top-p-slider').value = modelParams.top_p;
+    document.getElementById('top-p-value').textContent = modelParams.top_p.toFixed(2);
+    
+    document.getElementById('frequency-penalty-slider').value = modelParams.frequency_penalty;
+    document.getElementById('frequency-penalty-value').textContent = modelParams.frequency_penalty.toFixed(1);
+    
+    document.getElementById('presence-penalty-slider').value = modelParams.presence_penalty;
+    document.getElementById('presence-penalty-value').textContent = modelParams.presence_penalty.toFixed(1);
+    
+    document.getElementById('max-tokens-input').value = modelParams.max_tokens;
+    const displayValue = modelParams.max_tokens === -1 ? "-1 (unlimited)" : modelParams.max_tokens;
+    document.getElementById('max-tokens-value').textContent = displayValue;
+    
+    document.getElementById('system-prompt-textarea').value = modelParams.system_prompt;
+    
+    addMessage('Model parameters reset to defaults.', false);
+}
+
+function saveModelParams() {
+    // Save current parameters to localStorage
+    localStorage.setItem('lms_chat_model_params', JSON.stringify(modelParams));
+    addMessage('Model parameters saved as default.', false);
+}
+
+function loadSavedModelParams() {
+    // Load parameters from localStorage if available
+    const savedParams = localStorage.getItem('lms_chat_model_params');
+    if (savedParams) {
+        try {
+            const params = JSON.parse(savedParams);
+            modelParams = { ...defaultModelParams, ...params };
+            
+            // Update UI with loaded values
+            document.getElementById('temperature-slider').value = modelParams.temperature;
+            document.getElementById('temperature-value').textContent = modelParams.temperature.toFixed(1);
+            
+            document.getElementById('top-p-slider').value = modelParams.top_p;
+            document.getElementById('top-p-value').textContent = modelParams.top_p.toFixed(2);
+            
+            document.getElementById('frequency-penalty-slider').value = modelParams.frequency_penalty;
+            document.getElementById('frequency-penalty-value').textContent = modelParams.frequency_penalty.toFixed(1);
+            
+            document.getElementById('presence-penalty-slider').value = modelParams.presence_penalty;
+            document.getElementById('presence-penalty-value').textContent = modelParams.presence_penalty.toFixed(1);
+            
+            document.getElementById('max-tokens-input').value = modelParams.max_tokens;
+            const displayValue = modelParams.max_tokens === -1 ? "-1 (unlimited)" : modelParams.max_tokens;
+            document.getElementById('max-tokens-value').textContent = displayValue;
+            
+            document.getElementById('system-prompt-textarea').value = modelParams.system_prompt;
+        } catch (error) {
+            console.error('Error loading saved model parameters:', error);
+        }
+    }
+}
+
 function sendMessage() {
     const message = userInput.value.trim();
     if (!message || !isConnected) return;
@@ -116,7 +246,7 @@ function sendMessage() {
     let messages = [];
     
     // Start with system message
-    messages.push({ role: 'system', content: 'I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.' });
+    messages.push({ role: 'system', content: modelParams.system_prompt });
     
     // If RAG is enabled and we have documents, create a special RAG prompt for the current message
     if (ragEnabled && window.RAG && window.RAG.getDocumentCount() > 0) {
@@ -142,8 +272,11 @@ function sendMessage() {
         body: JSON.stringify({
             model: currentModel,
             messages: messages,
-            temperature: 0.8,
-            max_tokens: -1,
+            temperature: modelParams.temperature,
+            top_p: modelParams.top_p,
+            frequency_penalty: modelParams.frequency_penalty,
+            presence_penalty: modelParams.presence_penalty,
+            max_tokens: modelParams.max_tokens,
             stream: false
         })
     })

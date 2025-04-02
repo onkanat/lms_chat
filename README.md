@@ -9,8 +9,13 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 - Automatic model detection and selection
 - Clean, intuitive chat interface
 - Full chat history support for contextual conversations
-- System message customization
-- Temperature and token limit controls
+- Advanced model parameter controls:
+  - Temperature adjustment
+  - Top P (nucleus sampling)
+  - Frequency and presence penalties
+  - Max tokens limit
+  - Custom system prompts
+- Parameter presets that can be saved and loaded
 
 ### Retrieval-Augmented Generation (RAG)
 - Upload and manage document knowledge base
@@ -59,7 +64,13 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 4. Enter the LM Studio server address (typically `http://localhost:1234`)
 5. Click "Connect" to establish a connection
 6. Select a model from the dropdown menu
-7. Start chatting!
+7. (Optional) Click "Parameters" to adjust model settings:
+   - Adjust temperature for more/less randomness
+   - Set Top P for nucleus sampling
+   - Configure frequency and presence penalties to reduce repetition
+   - Set max tokens or leave as -1 for unlimited
+   - Customize the system prompt
+8. Start chatting!
 
 ### Using RAG (Retrieval-Augmented Generation)
 
