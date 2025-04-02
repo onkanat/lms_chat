@@ -38,11 +38,16 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 - Copy-to-clipboard functionality for any message
 
 ### User Experience
+- Conversation management system:
+  - Save and name conversations for later reference
+  - Organize conversations into folders
+  - Easily switch between different conversations
+  - Automatic tracking of unsaved changes
 - Streaming responses that appear in real-time as they're generated
 - Responsive design that works on desktop and mobile
 - Dark mode support
 - Message timestamps and token usage statistics
-- Save entire chat history as JSON for later reference
+- Export chat history as JSON
 - Clear chat functionality with a single click
 - Popup text editor for composing complex messages
 
@@ -79,6 +84,27 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
    - Set max tokens or leave as -1 for unlimited
    - Customize the system prompt
 8. Start chatting! The interface will automatically format messages according to your model's requirements and display responses in real-time if streaming is enabled
+9. Use the conversation manager (📚 button) to save, organize, and switch between conversations
+
+### Managing Conversations
+
+1. Click the conversation manager button (📚) in the top menu to open the conversation panel
+2. Save the current conversation:
+   - Click "💾 Save" and enter a title for your conversation
+   - The conversation will be saved to your browser's localStorage
+3. Create a new conversation:
+   - Click "+ New Chat" to start a fresh conversation
+   - You'll be prompted to save any unsaved changes
+4. Organize conversations:
+   - Click "📁 New Folder" to create a folder for organizing conversations
+   - Drag conversations into folders to organize them
+   - Rename folders by clicking the edit button (✏️)
+5. Load a previous conversation:
+   - Click on any saved conversation to load it
+   - The current conversation title is displayed above the chat
+   - An asterisk (*) indicates unsaved changes
+6. Delete conversations or folders:
+   - Click the delete button (🗑️) next to any conversation or folder
 
 ### Using RAG (Retrieval-Augmented Generation)
 
@@ -112,12 +138,17 @@ lms_chat/
 │   ├── index.html            # Main chat interface
 │   ├── styles.css            # Core application styling
 │   ├── app.js                # Core application logic
+│   ├── model-templates.js    # Model-specific templates
 │   ├── p_editor.html         # Popup text editor
 │   ├── chat/                 # Additional chat components
-│   └── rag/                  # RAG functionality
-│       ├── rag.js            # Core RAG implementation
-│       ├── rag-ui.js         # RAG user interface components
-│       └── rag-styles.css    # RAG-specific styling
+│   ├── rag/                  # RAG functionality
+│   │   ├── rag.js            # Core RAG implementation
+│   │   ├── rag-ui.js         # RAG user interface components
+│   │   └── rag-styles.css    # RAG-specific styling
+│   └── conversations/        # Conversation management
+│       ├── conversation-manager.js    # Conversation logic
+│       ├── conversation-ui.js         # Conversation UI components
+│       └── conversation-styles.css    # Conversation styling
 └── lms.html                  # Legacy interface
 ```
 
@@ -126,10 +157,14 @@ lms_chat/
 - `index.html` - Main entry point and HTML structure
 - `styles.css` - Global styling for the application
 - `app.js` - Core chat functionality and API integration
+- `model-templates.js` - Templates for different LLM models
 - `p_editor.html` - Popup text editor for complex message composition
 - `rag/rag.js` - Document processing, storage, and retrieval logic
 - `rag/rag-ui.js` - UI components for document management
 - `rag/rag-styles.css` - Styling for RAG interface elements
+- `conversations/conversation-manager.js` - Conversation saving and loading logic
+- `conversations/conversation-ui.js` - UI for conversation management
+- `conversations/conversation-styles.css` - Styling for conversation components
 
 ## Development
 

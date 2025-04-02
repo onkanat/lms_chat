@@ -648,10 +648,10 @@ function clearChat() {
     
     // Re-add the buttons
     createSaveButton();
-    
-    // Add a message indicating the chat was cleared
-    addMessage('Chat history has been cleared.', false);
 }
+
+// Make clearChat function globally accessible
+window.clearChat = clearChat;
 
 function saveChat() {
     // Get messages from UI
@@ -692,6 +692,9 @@ function saveChat() {
 function addMessage(content, isUser, metrics = null, ragContext = null) {
     chatContainer.appendChild(createMessageElement(content, isUser, metrics, ragContext));
     chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // Dispatch an event to notify that a message has been added
+    document.dispatchEvent(new Event('message-added'));
 }
 
 function createMessageElement(content, isUser, metrics, ragContext = null) {

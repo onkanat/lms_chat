@@ -23,6 +23,7 @@
     <!-- Custom Styles and Scripts -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="rag/rag-styles.css">
+    <link rel="stylesheet" href="conversations/conversation-styles.css">
     <title>LM Studio Chat</title>
 </head>
 <body>
@@ -124,11 +125,15 @@
     <script src="rag/rag.js"></script>
     <script src="rag/rag-ui.js"></script>
     <script src="model-templates.js"></script>
+    <script src="conversations/conversation-manager.js"></script>
+    <script src="conversations/conversation-ui.js"></script>
     <script src="app.js"></script>
     <script>
-        // Initialize RAG UI after page load
+        // Initialize UI components after page load
         document.addEventListener('DOMContentLoaded', function() {
             window.RAGUI.init();
+            window.ConversationUI.init();
+            window.ConversationManager.init();
         });
     </script>
 </body>
