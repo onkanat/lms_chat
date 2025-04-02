@@ -38,6 +38,7 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 - Copy-to-clipboard functionality for any message
 
 ### User Experience
+- Streaming responses that appear in real-time as they're generated
 - Responsive design that works on desktop and mobile
 - Dark mode support
 - Message timestamps and token usage statistics
@@ -71,12 +72,13 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 6. Select a model from the dropdown menu
 7. (Optional) Click "Parameters" to adjust model settings:
    - Select an appropriate template for your model type
+   - Enable/disable streaming responses for real-time generation
    - Adjust temperature for more/less randomness
    - Set Top P for nucleus sampling
    - Configure frequency and presence penalties to reduce repetition
    - Set max tokens or leave as -1 for unlimited
    - Customize the system prompt
-8. Start chatting! The interface will automatically format messages according to your model's requirements
+8. Start chatting! The interface will automatically format messages according to your model's requirements and display responses in real-time if streaming is enabled
 
 ### Using RAG (Retrieval-Augmented Generation)
 

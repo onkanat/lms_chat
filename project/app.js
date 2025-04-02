@@ -20,7 +20,8 @@ const defaultModelParams = {
     presence_penalty: 0.0,
     max_tokens: -1,
     system_prompt: 'I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.',
-    template: 'default'
+    template: 'default',
+    streaming: true
 };
 
 // Current model parameters (initialized with defaults)
@@ -52,6 +53,7 @@ document.getElementById('presence-penalty-slider').addEventListener('input', upd
 document.getElementById('max-tokens-input').addEventListener('input', updateMaxTokens);
 document.getElementById('system-prompt-textarea').addEventListener('input', updateSystemPrompt);
 document.getElementById('model-template-select').addEventListener('change', updateModelTemplate);
+document.getElementById('streaming-toggle').addEventListener('change', updateStreaming);
 document.getElementById('reset-params-button').addEventListener('click', resetModelParams);
 document.getElementById('save-params-button').addEventListener('click', saveModelParams);
 
@@ -228,6 +230,10 @@ function updateSystemPrompt(e) {
     modelParams.system_prompt = e.target.value;
 }
 
+function updateStreaming(e) {
+    modelParams.streaming = e.target.checked;
+}
+
 function resetModelParams() {
     // Reset to default values
     modelParams = { ...defaultModelParams };
@@ -250,6 +256,8 @@ function resetModelParams() {
     document.getElementById('max-tokens-value').textContent = displayValue;
     
     document.getElementById('system-prompt-textarea').value = modelParams.system_prompt;
+    
+    document.getElementById('streaming-toggle').checked = modelParams.streaming;
     
     addMessage('Model parameters reset to defaults.', false);
 }
@@ -287,6 +295,11 @@ function loadSavedModelParams() {
             
             document.getElementById('system-prompt-textarea').value = modelParams.system_prompt;
             
+            // Set streaming toggle
+            if (typeof modelParams.streaming !== 'undefined') {
+                document.getElementById('streaming-toggle').checked = modelParams.streaming;
+            }
+            
             // Set the template if it exists
             if (modelParams.template) {
                 const templateSelect = document.getElementById('model-template-select');
@@ -307,6 +320,101 @@ function loadSavedModelParams() {
             console.error('Error loading saved model parameters:', error);
         }
     }
+}
+
+// Functions for handling streaming messages
+function addStreamingMessage(ragContext = null) {
+    // Create a unique ID for this message
+    const messageId = 'msg-' + Date.now();
+    
+    // Create the message element
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', 'assistant-message', 'streaming-message');
+    messageDiv.id = messageId;
+    
+    // Add model name if available
+    if (currentModel) {
+        messageDiv.appendChild(createModelDiv(currentModel));
+    }
+    
+    // Add header
+    messageDiv.appendChild(createHeaderDiv(false));
+    
+    // Add RAG context if available
+    if (ragContext && ragContext.length > 0) {
+        messageDiv.appendChild(createRAGContextDiv(ragContext));
+    }
+    
+    // Add content div with loading indicator
+    const contentDiv = document.createElement('div');
+    contentDiv.classList.add('message-content');
+    contentDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+    messageDiv.appendChild(contentDiv);
+    
+    // Add metrics div (will be updated later)
+    const metricsDiv = document.createElement('div');
+    metricsDiv.classList.add('message-metrics');
+    metricsDiv.textContent = 'Generating...';
+    messageDiv.appendChild(metricsDiv);
+    
+    // Add to chat container and scroll to bottom
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    return messageId;
+}
+
+function updateStreamingMessage(messageId, content) {
+    const messageDiv = document.getElementById(messageId);
+    if (!messageDiv) return;
+    
+    const contentDiv = messageDiv.querySelector('.message-content');
+    if (!contentDiv) return;
+    
+    // Update content with the current text
+    contentDiv.innerHTML = marked.parse(content);
+    
+    // Apply syntax highlighting
+    processCodeBlocksAndMathJax(contentDiv);
+    
+    // Scroll to bottom if we're already near the bottom
+    const isNearBottom = chatContainer.scrollTop + chatContainer.clientHeight >= chatContainer.scrollHeight - 100;
+    if (isNearBottom) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+}
+
+function finalizeStreamingMessage(messageId, content, totalTokens, timeElapsed, stopReason, ragContext = null) {
+    const messageDiv = document.getElementById(messageId);
+    if (!messageDiv) return;
+    
+    // Remove streaming class
+    messageDiv.classList.remove('streaming-message');
+    
+    // Update content one last time
+    updateStreamingMessage(messageId, content);
+    
+    // Update metrics
+    const metricsDiv = messageDiv.querySelector('.message-metrics');
+    if (metricsDiv) {
+        const stopReasonText = stopReason === 'stop' ? 'eosFound' : stopReason;
+        metricsDiv.textContent = `${totalTokens || '?'} tokens • ${timeElapsed || '0.00'}s • Stop: ${stopReasonText}`;
+        
+        // Show template info if a special template is being used
+        if (currentModelTemplate && currentModelTemplate.requiresSpecialHandling && 
+            currentModelTemplate.name !== 'Default Template') {
+            const templateInfo = document.createElement('div');
+            templateInfo.className = 'template-info';
+            templateInfo.textContent = `Using ${currentModelTemplate.name} template`;
+            metricsDiv.appendChild(templateInfo);
+        }
+    }
+    
+    // Add to chat history
+    chatHistory.push({ role: 'assistant', content: content });
+    
+    // Re-enable send button
+    sendButton.disabled = false;
 }
 
 function sendMessage() {
@@ -357,25 +465,111 @@ function sendMessage() {
     // Get stop tokens for the model if available
     const stopTokens = currentModelTemplate ? 
         currentModelTemplate.stopTokens || [] : [];
-
-    fetch(`${serverUrlInput.value}/v1/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: currentModel,
-            messages: messages,
-            temperature: modelParams.temperature,
-            top_p: modelParams.top_p,
-            frequency_penalty: modelParams.frequency_penalty,
-            presence_penalty: modelParams.presence_penalty,
-            max_tokens: modelParams.max_tokens,
-            stop: stopTokens.length > 0 ? stopTokens : undefined,
-            stream: false
+    
+    // Prepare request body
+    const requestBody = {
+        model: currentModel,
+        messages: messages,
+        temperature: modelParams.temperature,
+        top_p: modelParams.top_p,
+        frequency_penalty: modelParams.frequency_penalty,
+        presence_penalty: modelParams.presence_penalty,
+        max_tokens: modelParams.max_tokens,
+        stop: stopTokens.length > 0 ? stopTokens : undefined,
+        stream: modelParams.streaming
+    };
+    
+    // Check if streaming is enabled
+    if (modelParams.streaming) {
+        // Create a placeholder for the assistant's response
+        const assistantMessageId = addStreamingMessage(ragContext);
+        
+        // Use streaming API
+        fetch(`${serverUrlInput.value}/v1/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
         })
-    })
-    .then(response => response.json())
-    .then(data => handleResponseData(message, data, ragContext))
-    .catch(error => handleErrorSend(error));
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            // Get a reader from the response body stream
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+            let fullContent = '';
+            let totalTokens = 0;
+            let startTime = performance.now();
+            
+            // Process the stream
+            function processStream() {
+                return reader.read().then(({ done, value }) => {
+                    if (done) {
+                        // Stream is complete, finalize the message
+                        const timeElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+                        finalizeStreamingMessage(assistantMessageId, fullContent, totalTokens, timeElapsed, 'stop', ragContext);
+                        return;
+                    }
+                    
+                    // Decode the chunk and add it to the buffer
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Process complete lines in the buffer
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // Keep the last incomplete line in the buffer
+                    
+                    for (const line of lines) {
+                        if (line.trim() === '') continue;
+                        if (line.trim() === 'data: [DONE]') continue;
+                        
+                        try {
+                            // Remove the "data: " prefix and parse the JSON
+                            const jsonStr = line.replace(/^data: /, '');
+                            const json = JSON.parse(jsonStr);
+                            
+                            // Extract the content delta
+                            const delta = json.choices[0].delta;
+                            if (delta && delta.content) {
+                                fullContent += delta.content;
+                                updateStreamingMessage(assistantMessageId, fullContent);
+                            }
+                            
+                            // Update token count if available
+                            if (json.usage && json.usage.total_tokens) {
+                                totalTokens = json.usage.total_tokens;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing streaming response:', e, line);
+                        }
+                    }
+                    
+                    // Continue processing the stream
+                    return processStream();
+                });
+            }
+            
+            return processStream();
+        })
+        .catch(error => {
+            // Handle errors during streaming
+            console.error('Streaming error:', error);
+            updateStreamingMessage(assistantMessageId, 'Error: Unable to get a response from the server. Please try again.');
+            finalizeStreamingMessage(assistantMessageId, 'Error: Unable to get a response from the server.', 0, 0, 'error');
+            sendButton.disabled = false;
+        });
+    } else {
+        // Use non-streaming API
+        fetch(`${serverUrlInput.value}/v1/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        })
+        .then(response => response.json())
+        .then(data => handleResponseData(message, data, ragContext))
+        .catch(error => handleErrorSend(error));
+    }
 }
 
 function handleResponseData(originalMessage, data, ragContext = null) {
