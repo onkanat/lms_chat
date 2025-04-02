@@ -43,6 +43,12 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
   - Organize conversations into folders
   - Easily switch between different conversations
   - Automatic tracking of unsaved changes
+- Enhanced RAG (Retrieval-Augmented Generation):
+  - Client-side vector embeddings using TensorFlow.js
+  - Multiple chunking strategies (fixed, paragraph, semantic)
+  - Support for PDF and DOCX documents
+  - Hybrid retrieval (keyword + semantic)
+  - Customizable retrieval parameters
 - Theme customization:
   - Multiple preset themes (Light, Dark, High Contrast, Solarized, Nord, Dracula)
   - Custom color selection for all UI elements
@@ -137,22 +143,31 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 6. Reset to defaults:
    - Click "Reset to Default" to revert to the original dark theme
 
-### Using RAG (Retrieval-Augmented Generation)
+### Using Enhanced RAG (Retrieval-Augmented Generation)
 
 1. Toggle the RAG switch in the top menu to enable RAG functionality
-2. Upload text documents (.txt, .md) to your knowledge base
-   - Click "Upload Document" and select files from your computer
-   - Documents are stored locally in your browser's localStorage
-3. Ask questions related to your documents
-4. The system will automatically:
+   - Choose between standard RAG or enhanced RAG
+   - Click the 📚 button to open the RAG panel
+2. Upload documents to your knowledge base
+   - Supports PDF, DOCX, TXT, and MD files
+   - Drag and drop files or use the upload button
+   - Documents are processed and stored locally in your browser
+3. Configure RAG settings:
+   - Choose chunking strategy (fixed, paragraph, semantic)
+   - Adjust chunk size and overlap
+   - Select retrieval method (keyword, semantic, hybrid)
+   - Set similarity threshold and number of chunks to retrieve
+4. Ask questions related to your documents
+5. The system will automatically:
    - Analyze your question
-   - Retrieve relevant information from your documents
+   - Generate embeddings using TensorFlow.js
+   - Retrieve the most relevant chunks from your documents
    - Include this context in the prompt sent to the AI
    - Generate a more informed response
-5. View source documents by clicking "Show sources" in the response
-6. Toggle RAG off when you want standard responses without document context
+6. View source documents by clicking "Show sources" in the response
+7. Toggle RAG off when you want standard responses without document context
 
-> **Note:** The RAG implementation uses a simple keyword-based retrieval system. For production use, consider implementing a more sophisticated embedding-based retrieval system.
+> **Note:** All processing happens locally in your browser - no data is sent to external servers for embedding or retrieval.
 
 ## Keyboard Shortcuts
 
@@ -172,10 +187,14 @@ lms_chat/
 │   ├── model-templates.js    # Model-specific templates
 │   ├── p_editor.html         # Popup text editor
 │   ├── chat/                 # Additional chat components
-│   ├── rag/                  # RAG functionality
+│   ├── rag/                  # Basic RAG functionality
 │   │   ├── rag.js            # Core RAG implementation
 │   │   ├── rag-ui.js         # RAG user interface components
 │   │   └── rag-styles.css    # RAG-specific styling
+│   ├── rag-enhanced/         # Enhanced RAG functionality
+│   │   ├── rag-enhanced-core.js      # Advanced RAG implementation
+│   │   ├── rag-enhanced-ui.js        # Enhanced RAG UI components
+│   │   └── rag-enhanced-styles.css   # Enhanced RAG styling
 │   ├── conversations/        # Conversation management
 │   │   ├── conversation-manager.js    # Conversation logic
 │   │   ├── conversation-ui.js         # Conversation UI components
@@ -194,9 +213,12 @@ lms_chat/
 - `app.js` - Core chat functionality and API integration
 - `model-templates.js` - Templates for different LLM models
 - `p_editor.html` - Popup text editor for complex message composition
-- `rag/rag.js` - Document processing, storage, and retrieval logic
-- `rag/rag-ui.js` - UI components for document management
-- `rag/rag-styles.css` - Styling for RAG interface elements
+- `rag/rag.js` - Basic document processing and retrieval logic
+- `rag/rag-ui.js` - Basic RAG UI components
+- `rag/rag-styles.css` - Styling for basic RAG interface
+- `rag-enhanced/rag-enhanced-core.js` - Advanced RAG with vector embeddings
+- `rag-enhanced/rag-enhanced-ui.js` - Enhanced RAG UI with document management
+- `rag-enhanced/rag-enhanced-styles.css` - Styling for enhanced RAG interface
 - `conversations/conversation-manager.js` - Conversation saving and loading logic
 - `conversations/conversation-ui.js` - UI for conversation management
 - `conversations/conversation-styles.css` - Styling for conversation components

@@ -20,9 +20,19 @@
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script>
     
+    <!-- RAG Enhanced Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <script>
+        // Set PDF.js worker path
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
+    </script>
+    
     <!-- Custom Styles and Scripts -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="rag/rag-styles.css">
+    <link rel="stylesheet" href="rag-enhanced/rag-enhanced-styles.css">
     <link rel="stylesheet" href="conversations/conversation-styles.css">
     <link rel="stylesheet" href="themes/theme-styles.css">
     <title>LM Studio Chat</title>
@@ -125,6 +135,8 @@
 
     <script src="rag/rag.js"></script>
     <script src="rag/rag-ui.js"></script>
+    <script src="rag-enhanced/rag-enhanced-core.js"></script>
+    <script src="rag-enhanced/rag-enhanced-ui.js"></script>
     <script src="model-templates.js"></script>
     <script src="conversations/conversation-manager.js"></script>
     <script src="conversations/conversation-ui.js"></script>
@@ -137,6 +149,9 @@
             window.ThemeManager.init();
             window.ThemeUI.init();
             window.RAGUI.init();
+            window.RAGEnhanced.init().then(() => {
+                window.RAGEnhancedUI.init();
+            });
             window.ConversationUI.init();
             window.ConversationManager.init();
         });

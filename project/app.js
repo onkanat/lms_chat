@@ -430,8 +430,9 @@ function sendMessage() {
     userInput.value = '';
     sendButton.disabled = true;
     
-    // Check if RAG is enabled
+    // Check if RAG is enabled (either standard or enhanced)
     const ragEnabled = document.getElementById('rag-toggle')?.checked || false;
+    const ragEnhancedEnabled = document.getElementById('rag-enhanced-toggle')?.checked || false;
     let userPrompt = message;
     let ragContext = null;
     let messages = [];
@@ -439,8 +440,41 @@ function sendMessage() {
     // Start with system message
     messages.push({ role: 'system', content: modelParams.system_prompt });
     
-    // If RAG is enabled and we have documents, create a special RAG prompt for the current message
-    if (ragEnabled && window.RAG && window.RAG.getDocumentCount() > 0) {
+    // If enhanced RAG is enabled and we have documents, use it
+    if (ragEnhancedEnabled && window.RAGEnhanced && window.RAGEnhanced.getDocumentCount() > 0) {
+        try {
+            // Show loading indicator in the UI
+            addMessage("Retrieving relevant information...", false);
+            
+            // Get augmented prompt from enhanced RAG
+            const ragResult = await window.RAGEnhanced.augmentPromptWithRAG(message);
+            userPrompt = ragResult.augmentedPrompt;
+            ragContext = ragResult.context;
+            
+            // Remove the loading message
+            const loadingMessage = chatContainer.lastChild;
+            chatContainer.removeChild(loadingMessage);
+            
+            // Add previous chat history (excluding the last user message which will be replaced with RAG-augmented one)
+            if (chatHistory.length > 1) {
+                messages = messages.concat(chatHistory.slice(0, -1));
+            }
+            
+            // Add the RAG-augmented message
+            messages.push({ role: 'user', content: userPrompt });
+        } catch (error) {
+            console.error('Error using enhanced RAG:', error);
+            
+            // Remove the loading message
+            const loadingMessage = chatContainer.lastChild;
+            chatContainer.removeChild(loadingMessage);
+            
+            // Fall back to standard behavior
+            messages = messages.concat(chatHistory);
+        }
+    }
+    // If standard RAG is enabled and we have documents, use it
+    else if (ragEnabled && window.RAG && window.RAG.getDocumentCount() > 0) {
         const ragResult = window.RAG.augmentPromptWithRAG(message);
         userPrompt = ragResult.augmentedPrompt;
         ragContext = ragResult.context;
@@ -723,6 +757,13 @@ function createMessageElement(content, isUser, metrics, ragContext = null) {
 }
 
 function createRAGContextDiv(ragContext) {
+    // Check if it's enhanced RAG context (has documentId property)
+    if (ragContext[0] && ragContext[0].documentId && window.RAGEnhancedUI) {
+        // Use the enhanced RAG UI to create the context element
+        return window.RAGEnhancedUI.createRAGContextElement(ragContext);
+    }
+    
+    // Standard RAG context
     const contextDiv = document.createElement('div');
     contextDiv.classList.add('rag-context');
     
@@ -746,7 +787,12 @@ function createRAGContextDiv(ragContext) {
     ragContext.forEach(chunk => {
         const sourceDiv = document.createElement('div');
         sourceDiv.classList.add('rag-source');
-        sourceDiv.innerHTML = `<strong>${chunk.documentName}</strong>: "${chunk.content.substring(0, 150)}${chunk.content.length > 150 ? '...' : ''}"`;
+        
+        // Handle both old and new RAG context formats
+        const documentName = chunk.documentName || chunk.title || 'Document';
+        const content = chunk.content || '';
+        
+        sourceDiv.innerHTML = `<strong>${documentName}</strong>: "${content.substring(0, 150)}${content.length > 150 ? '...' : ''}"`;
         contextContent.appendChild(sourceDiv);
     });
     
