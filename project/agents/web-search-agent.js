@@ -54,14 +54,130 @@ const WebSearchAgent = {
         
         // Generate a deterministic but varied set of results based on the query
         const queryHash = this.simpleHash(query);
+        const queryLower = query.toLowerCase();
         
+        // Check if this is a weather-related query
+        const isWeatherQuery = queryLower.includes('weather') || 
+                              queryLower.includes('hava') || 
+                              queryLower.includes('durumu') || 
+                              queryLower.includes('forecast') ||
+                              queryLower.includes('temperature') ||
+                              queryLower.includes('sıcaklık');
+        
+        // Check if this is a location-specific query
+        const locationMatches = query.match(/([A-Za-zÇçĞğİıÖöŞşÜü]+\s*[A-Za-zÇçĞğİıÖöŞşÜü]*)/g) || [];
+        const possibleLocations = locationMatches.filter(loc => loc.length > 3);
+        
+        if (isWeatherQuery && possibleLocations.length > 0) {
+            // Generate weather-specific results
+            return this.generateWeatherResults(query, possibleLocations, numResults, queryHash);
+        }
+        
+        // For other types of queries, generate general results
         for (let i = 0; i < numResults; i++) {
             const resultHash = this.simpleHash(query + i);
             
+            // Make sure each result is different
             results.push({
-                title: `${this.getSimulatedTitle(query, i, resultHash)}`,
+                title: `${this.getSimulatedTitle(query, i, resultHash + i * 100)}`,
                 link: `https://example.com/result/${queryHash}/${i}`,
-                snippet: this.getSimulatedSnippet(query, i, resultHash),
+                snippet: this.getSimulatedSnippet(query, i, resultHash + i * 200),
+                position: i + 1
+            });
+        }
+        
+        return results;
+    },
+    
+    // Generate weather-specific results
+    generateWeatherResults(query, locations, numResults, queryHash) {
+        const results = [];
+        const location = locations[0].trim(); // Use the first identified location
+        const currentDate = new Date();
+        
+        // Weather websites
+        const weatherSites = [
+            { name: "AccuWeather", domain: "accuweather.com" },
+            { name: "Weather.com", domain: "weather.com" },
+            { name: "Meteoroloji Genel Müdürlüğü", domain: "mgm.gov.tr" },
+            { name: "Havadurumu15gunluk.xyz", domain: "havadurumu15gunluk.xyz" },
+            { name: "Weather-Forecast", domain: "weather-forecast.com" }
+        ];
+        
+        // Generate a temperature based on the hash
+        const baseTemp = 10 + (queryHash % 30); // Temperature between 10-40°C
+        const lowTemp = baseTemp - (5 + (queryHash % 10));
+        const highTemp = baseTemp + (queryHash % 8);
+        
+        // Weather conditions based on temperature
+        let condition;
+        if (highTemp > 30) condition = "Sunny";
+        else if (highTemp > 25) condition = "Partly Cloudy";
+        else if (highTemp > 20) condition = "Cloudy";
+        else if (highTemp > 15) condition = "Light Rain";
+        else condition = "Rain";
+        
+        // Turkish translation of condition
+        const conditionTR = {
+            "Sunny": "Güneşli",
+            "Partly Cloudy": "Parçalı Bulutlu",
+            "Cloudy": "Bulutlu",
+            "Light Rain": "Hafif Yağmurlu",
+            "Rain": "Yağmurlu"
+        }[condition];
+        
+        // Add weather forecast result
+        results.push({
+            title: `${location} Weather - Current Conditions and Forecast | ${weatherSites[0].name}`,
+            link: `https://${weatherSites[0].domain}/en/weather-forecast/${encodeURIComponent(location.toLowerCase().replace(/\s+/g, '-'))}`,
+            snippet: `Current weather in ${location}: ${condition}, ${baseTemp}°C. Today's forecast: High ${highTemp}°C, Low ${lowTemp}°C. ${condition} conditions will continue throughout the day with humidity around ${40 + (queryHash % 40)}%.`,
+            position: 1
+        });
+        
+        // Add Turkish weather result
+        results.push({
+            title: `${location} Hava Durumu - 15 Günlük Tahmin | ${weatherSites[2].name}`,
+            link: `https://${weatherSites[2].domain}/tahmin/gunluk/${encodeURIComponent(location.toLowerCase().replace(/\s+/g, '-'))}`,
+            snippet: `${location} için güncel hava durumu: ${conditionTR}, ${baseTemp}°C. Bugün beklenen en yüksek sıcaklık ${highTemp}°C, en düşük ${lowTemp}°C. Nem oranı %${40 + (queryHash % 40)}. Rüzgar hızı ${5 + (queryHash % 15)} km/s.`,
+            position: 2
+        });
+        
+        // Add 15-day forecast result
+        results.push({
+            title: `${location} 15 Day Weather Forecast | ${weatherSites[3].name}`,
+            link: `https://${weatherSites[3].domain}/en/${encodeURIComponent(location.toLowerCase())}`,
+            snippet: `15-day weather forecast for ${location}. Extended outlook with high and low temperatures, precipitation chance, and daily conditions. Plan ahead with our accurate long-range forecast.`,
+            position: 3
+        });
+        
+        // Add more results if needed
+        if (numResults > 3) {
+            results.push({
+                title: `${location} Weather Radar and Maps | ${weatherSites[1].name}`,
+                link: `https://${weatherSites[1].domain}/weather/${encodeURIComponent(location.toLowerCase())}`,
+                snippet: `View ${location} weather radar, satellite images, and meteorological maps. Track storms, rain, and weather systems in real-time. Hourly and daily forecasts available.`,
+                position: 4
+            });
+        }
+        
+        if (numResults > 4) {
+            results.push({
+                title: `Historical Weather Data for ${location} | Weather Archive`,
+                link: `https://weatherarchive.org/${encodeURIComponent(location.toLowerCase())}`,
+                snippet: `Access historical weather data for ${location}. Compare current conditions with past averages. Temperature, precipitation, and wind data available for the past 10 years.`,
+                position: 5
+            });
+        }
+        
+        // Fill any remaining results with generic weather information
+        while (results.length < numResults) {
+            const i = results.length;
+            const resultHash = this.simpleHash(query + i);
+            
+            results.push({
+                title: `${this.getSimulatedTitle(query, i, resultHash + i * 100)}`,
+                link: `https://example.com/weather/${queryHash}/${i}`,
+                snippet: this.getSimulatedSnippet(query, i, resultHash + i * 200),
                 position: i + 1
             });
         }
@@ -76,7 +192,7 @@ const WebSearchAgent = {
             "Understanding",
             "Introduction to",
             "Advanced",
-            "Latest Developments in",
+            "Latest Information on",
             "How to",
             "The Ultimate",
             "Exploring",
@@ -87,18 +203,19 @@ const WebSearchAgent = {
         const titleSuffixes = [
             "- Comprehensive Overview",
             "| Expert Insights",
-            "- Latest Research",
-            "and Its Applications",
+            "- Latest Updates",
+            "and Related Information",
             "for Beginners",
-            "for Professionals",
-            "- A Deep Dive",
-            "in Modern Context",
+            "for Everyone",
+            "- A Detailed Look",
+            "in Today's Context",
             "- Explained Simply",
-            "and Future Directions"
+            "and Future Trends"
         ];
         
-        const prefixIndex = (hash + index) % titlePrefixes.length;
-        const suffixIndex = (hash + index + 3) % titleSuffixes.length;
+        // Use different prefixes and suffixes for each result
+        const prefixIndex = (hash + index * 3) % titlePrefixes.length;
+        const suffixIndex = (hash + index * 7) % titleSuffixes.length;
         
         return `${titlePrefixes[prefixIndex]} ${query} ${titleSuffixes[suffixIndex]}`;
     },
@@ -106,19 +223,20 @@ const WebSearchAgent = {
     // Get a simulated snippet based on the query
     getSimulatedSnippet(query, index, hash) {
         const snippetTemplates = [
-            "This comprehensive resource covers everything you need to know about {query}, including the latest developments and practical applications.",
-            "Learn about {query} from experts in the field. This article explores key concepts, methodologies, and real-world examples.",
-            "Discover the fundamentals of {query} and how it's transforming various industries. Includes case studies and best practices.",
-            "An in-depth analysis of {query}, examining its history, current state, and future prospects. Ideal for both beginners and experts.",
-            "This guide breaks down {query} into easy-to-understand components, with step-by-step explanations and visual aids.",
-            "Explore the cutting-edge research on {query} and its implications for technology, society, and policy.",
-            "A practical approach to understanding {query}, with hands-on examples, tutorials, and implementation strategies.",
-            "This article presents a comparative analysis of different approaches to {query}, highlighting strengths and limitations.",
-            "An expert review of {query}, covering theoretical foundations, practical applications, and emerging trends.",
-            "Delve into the world of {query} with this comprehensive resource that bridges theory and practice."
+            "This resource provides current information about {query}, including the latest updates and practical details.",
+            "Learn about {query} from reliable sources. This page explores key information, data, and real-world examples.",
+            "Find comprehensive information about {query} and how it affects various aspects of daily life.",
+            "An overview of {query}, examining current conditions and future outlook. Useful for planning and decision-making.",
+            "This guide explains {query} in easy-to-understand terms, with helpful explanations and visual information.",
+            "Access up-to-date information on {query} and its implications for your area and activities.",
+            "A practical approach to understanding {query}, with useful examples and implementation strategies.",
+            "This page presents detailed information about {query}, highlighting important factors to consider.",
+            "A thorough review of {query}, covering essential information and emerging patterns.",
+            "Find everything you need to know about {query} with this comprehensive resource."
         ];
         
-        const templateIndex = (hash + index) % snippetTemplates.length;
+        // Use a different template for each result
+        const templateIndex = (hash + index * 11) % snippetTemplates.length;
         return snippetTemplates[templateIndex].replace(/{query}/g, query);
     },
     
