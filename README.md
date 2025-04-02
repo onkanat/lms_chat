@@ -43,9 +43,17 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
   - Organize conversations into folders
   - Easily switch between different conversations
   - Automatic tracking of unsaved changes
+- Theme customization:
+  - Multiple preset themes (Light, Dark, High Contrast, Solarized, Nord, Dracula)
+  - Custom color selection for all UI elements
+  - Font family and size options
+  - Compact and comfortable layout options
+- Mobile-optimized interface:
+  - Responsive design that works on all screen sizes
+  - Touch-friendly controls with larger tap targets
+  - Optimized layouts for small screens
+  - Smooth scrolling and animations
 - Streaming responses that appear in real-time as they're generated
-- Responsive design that works on desktop and mobile
-- Dark mode support
 - Message timestamps and token usage statistics
 - Export chat history as JSON
 - Clear chat functionality with a single click
@@ -85,6 +93,10 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
    - Customize the system prompt
 8. Start chatting! The interface will automatically format messages according to your model's requirements and display responses in real-time if streaming is enabled
 9. Use the conversation manager (📚 button) to save, organize, and switch between conversations
+10. Customize the interface appearance with the theme manager (🎨 button):
+    - Choose from preset themes
+    - Customize colors, fonts, and layout density
+    - Changes are automatically saved to your browser
 
 ### Managing Conversations
 
@@ -105,6 +117,25 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
    - An asterisk (*) indicates unsaved changes
 6. Delete conversations or folders:
    - Click the delete button (🗑️) next to any conversation or folder
+
+### Customizing Themes
+
+1. Click the theme manager button (🎨) in the top menu to open the theme panel
+2. Choose a preset theme:
+   - Click on any of the preset theme options (Dark, Light, High Contrast, etc.)
+   - The theme will be applied immediately
+3. Customize colors:
+   - Use the color pickers to adjust individual UI elements
+   - Changes are applied in real-time
+4. Adjust fonts and layout:
+   - Select a font family from the dropdown menu
+   - Choose a font size that works best for you
+   - Switch between comfortable and compact layouts
+5. Save your customizations:
+   - All changes are automatically saved to your browser's localStorage
+   - You can also save your current settings as a custom theme
+6. Reset to defaults:
+   - Click "Reset to Default" to revert to the original dark theme
 
 ### Using RAG (Retrieval-Augmented Generation)
 
@@ -145,10 +176,14 @@ lms_chat/
 │   │   ├── rag.js            # Core RAG implementation
 │   │   ├── rag-ui.js         # RAG user interface components
 │   │   └── rag-styles.css    # RAG-specific styling
-│   └── conversations/        # Conversation management
-│       ├── conversation-manager.js    # Conversation logic
-│       ├── conversation-ui.js         # Conversation UI components
-│       └── conversation-styles.css    # Conversation styling
+│   ├── conversations/        # Conversation management
+│   │   ├── conversation-manager.js    # Conversation logic
+│   │   ├── conversation-ui.js         # Conversation UI components
+│   │   └── conversation-styles.css    # Conversation styling
+│   └── themes/               # Theme customization
+│       ├── theme-manager.js  # Theme management logic
+│       ├── theme-ui.js       # Theme UI components
+│       └── theme-styles.css  # Theme-specific styling
 └── lms.html                  # Legacy interface
 ```
 
@@ -165,6 +200,9 @@ lms_chat/
 - `conversations/conversation-manager.js` - Conversation saving and loading logic
 - `conversations/conversation-ui.js` - UI for conversation management
 - `conversations/conversation-styles.css` - Styling for conversation components
+- `themes/theme-manager.js` - Theme management and customization logic
+- `themes/theme-ui.js` - UI for theme customization
+- `themes/theme-styles.css` - Styling for themes and responsive design
 
 ## Development
 

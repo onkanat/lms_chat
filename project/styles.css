@@ -1,4 +1,5 @@
 :root {
+    /* Default theme variables - these will be overridden by ThemeManager */
     --background-color: #1e1e1e;
     --text-color: #ffffff;
     --input-background: #2d2d2d;
@@ -6,16 +7,31 @@
     --assistant-message-color: #2d2d2d;
     --button-color: #4a90e2;
     --accent-color: #4caf50;
+    --accent-color-rgb: 76, 175, 80;
     --danger-color: #f44336;
+    --border-color: #444444;
+    --text-muted: #888888;
+    
+    /* Default font variables */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-size: 14px;
+    --line-height: 1.5;
+    
+    /* Default layout variables */
+    --message-padding: 15px;
+    --message-margin: 15px;
+    --input-padding: 12px;
 }
 
 body, html {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
     padding: 0;
     height: 100%;
     background-color: var(--background-color);
     color: var(--text-color);
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    line-height: var(--line-height);
 }
 
 #app {
@@ -380,12 +396,10 @@ body, html {
 
 .message {
     max-width: 85%;
-    margin-bottom: 1rem;
-    padding: 0.5rem 1rem;
+    margin-bottom: var(--message-margin);
+    padding: var(--message-padding);
     border-radius: 1rem;
     word-wrap: break-word;
-    font-size: 0.9rem;
-    line-height: 1.4;
 }
 
 .user-message {
@@ -416,7 +430,7 @@ body, html {
 
 .message-model {
     font-size: 0.7rem;
-    color: #888;
+    color: var(--text-muted);
     margin-bottom: 0.25rem;
 }
 
@@ -426,29 +440,28 @@ body, html {
 
 .message-metrics {
     font-size: 0.7rem;
-    color: #888;
+    color: var(--text-muted);
 }
 
 #input-container {
     padding: 0.5rem;
     background-color: var(--input-background);
-    border-top: 1px solid #333;
+    border-top: 1px solid var(--border-color);
     display: flex;
     align-items: center;
 }
 
 #user-input {
     flex-grow: 1;
-    padding: 0.5rem;
-    border: 1px solid #4a5568;
+    padding: var(--input-padding);
+    border: 1px solid var(--border-color);
     border-radius: 1.5rem;
     background-color: var(--background-color);
     color: var(--text-color);
-    font-size: 0.9rem;
 }
 
 #user-input::placeholder {
-    color: #4a5568;
+    color: var(--text-muted);
 }
 
 #send-button {

@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="rag/rag-styles.css">
     <link rel="stylesheet" href="conversations/conversation-styles.css">
+    <link rel="stylesheet" href="themes/theme-styles.css">
     <title>LM Studio Chat</title>
 </head>
 <body>
@@ -127,10 +128,14 @@
     <script src="model-templates.js"></script>
     <script src="conversations/conversation-manager.js"></script>
     <script src="conversations/conversation-ui.js"></script>
+    <script src="themes/theme-manager.js"></script>
+    <script src="themes/theme-ui.js"></script>
     <script src="app.js"></script>
     <script>
         // Initialize UI components after page load
         document.addEventListener('DOMContentLoaded', function() {
+            window.ThemeManager.init();
+            window.ThemeUI.init();
             window.RAGUI.init();
             window.ConversationUI.init();
             window.ConversationManager.init();
