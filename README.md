@@ -1,4 +1,4 @@
-# LM Studio Chat Interface
+# LM Studio Chat Interface - Beta 1
 
 A lightweight, browser-based interface for interacting with [LM Studio](https://lmstudio.ai/)'s local API server. This application allows you to chat with any model loaded in LM Studio without requiring additional dependencies or complex setup.
 

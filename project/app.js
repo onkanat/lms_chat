@@ -1,3 +1,7 @@
+// LM Studio Chat Interface - Beta 1
+// Version information
+const APP_VERSION = 'Beta 1';
+
 // DOM Elements
 const chatContainer = document.getElementById('chat-container');
 const userInput = document.getElementById('user-input');
@@ -35,7 +39,16 @@ marked.setOptions({
     gfm: true,
     breaks: true,
     sanitize: false,
-    highlight: (code, lang) => Prism.highlight(code, Prism.languages[lang] || Prism.languages.javascript, 'javascript')
+    highlight: (code, lang) => Prism.highlight(code, Prism.languages[lang] || Prism.languages.javascript, 'javascript'),
+    renderer: (function() {
+        const renderer = new marked.Renderer();
+        // Override link renderer to open links in new tab
+        renderer.link = function(href, title, text) {
+            const link = marked.Renderer.prototype.link.call(this, href, title, text);
+            return link.replace('<a ', '<a target="_blank" rel="noopener noreferrer" ');
+        };
+        return renderer;
+    })()
 });
 
 // Event Listeners
