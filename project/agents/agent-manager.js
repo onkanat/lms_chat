@@ -113,18 +113,26 @@ const AgentManager = {
             for (let i = 0; i < toolCalls.length; i++) {
                 const toolCall = toolCalls[i];
                 const result = results[i];
+                
+                // Format the tool result with clear separation
+                const formattedResult = `${toolCall.original}\n\n---\n\n### Tool Result:\n\n${result}\n\n---\n\n`;
+                
+                // Replace the tool call with the formatted result
                 processedMessage = processedMessage.replace(
                     toolCall.original,
-                    `${toolCall.original}\n\n**Tool Result:**\n${result}`
+                    formattedResult
                 );
             }
+            
+            // Add a prompt at the end to encourage the model to respond
+            processedMessage += "\n\nBased on the information above, please provide a helpful response:";
             
             return { processed: true, message: processedMessage };
         } catch (error) {
             console.error('Error processing message with agents:', error);
             return { 
                 processed: true, 
-                message: `${message}\n\n**Tool Error:**\nFailed to process tool calls: ${error.message}` 
+                message: `${message}\n\n---\n\n### Tool Error:\n\nFailed to process tool calls: ${error.message}\n\n---\n\nBased on the information above, please provide a helpful response:` 
             };
         }
     },
