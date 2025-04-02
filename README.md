@@ -1,6 +1,15 @@
-# LM Studio Chat Interface - Beta 1
+# LM Studio Chat Interface - Beta 1.1
 
 A lightweight, browser-based interface for interacting with [LM Studio](https://lmstudio.ai/)'s local API server. This application allows you to chat with any model loaded in LM Studio without requiring additional dependencies or complex setup.
+
+## What's New in Beta 1.1
+
+- **Enhanced Prompt Editor**: Completely redesigned with formatting toolbar, templates, and keyboard shortcuts
+- **Improved JSON Response Handling**: Better formatting for structured responses from models like Gemma
+- **Enhanced RAG System**: More reliable PDF processing with fallback mechanisms
+- **Cross-Platform Keyboard Shortcuts**: Optimized for both macOS (⌘) and Windows/Linux (Alt)
+- **Agent System Improvements**: More realistic web search results and better agent response formatting
+- **Bug Fixes**: Resolved various console errors and improved error handling
 
 ## Features
 
@@ -267,6 +276,7 @@ Can you also find a specific paper on this topic?
 - `Shift+Enter` - Add a new line without sending
 - `Cmd+P` (Mac) or `Ctrl+P` (Windows/Linux) - Open popup text editor
 - `Esc` - Close popup dialogs
+- `Ctrl+Enter` - Send message from prompt editor
 
 ### Navigation (macOS)
 - `⌘+A` - Open accessibility settings
@@ -291,6 +301,15 @@ Can you also find a specific paper on this topic?
 - `Alt+S` - Focus send button
 - `Alt+I` - Focus input field
 - `Alt+M` - Focus model selector
+
+### Prompt Editor
+- `Ctrl+B` - Bold text
+- `Ctrl+I` - Italic text
+- `Ctrl+K` - Code block/inline code
+- `Ctrl+L` - Insert list
+- `Tab` - Insert indentation
+- `Ctrl+Enter` - Send prompt
+- `Esc` - Cancel and close editor
 
 ## Project Structure
 

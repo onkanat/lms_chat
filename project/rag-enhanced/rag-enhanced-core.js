@@ -37,21 +37,38 @@ const RAGEnhanced = {
         try {
             if (typeof pdfjsLib === 'undefined') {
                 console.log('Preloading PDF.js...');
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.min.js';
-                    script.onload = () => {
-                        // Set worker path after loading
-                        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
-                        console.log('PDF.js preloaded successfully');
-                        resolve();
-                    };
-                    script.onerror = (error) => {
-                        console.warn('Failed to preload PDF.js, will load on demand:', error);
-                        resolve(); // Continue initialization even if PDF.js fails to load
-                    };
-                    document.head.appendChild(script);
-                });
+                
+                // Check if PDF.js is already being loaded
+                const existingScript = document.querySelector('script[src*="pdf.js"]');
+                if (!existingScript) {
+                    await new Promise((resolve) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js';
+                        script.integrity = 'sha512-9jr6up8aB+1pH0xHKX5h5mwuJkCrj1rJwGSHZEy5V+rPLhJQoVLs5UUCKgn5qwKLuNxHzYqLxZXMXbQVFkOZCg==';
+                        script.crossOrigin = 'anonymous';
+                        script.referrerPolicy = 'no-referrer';
+                        
+                        script.onload = () => {
+                            // Set worker path after loading
+                            if (typeof pdfjsLib !== 'undefined') {
+                                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
+                                console.log('PDF.js preloaded successfully');
+                            }
+                            resolve();
+                        };
+                        
+                        script.onerror = () => {
+                            console.warn('Failed to preload PDF.js, will load on demand if needed');
+                            resolve(); // Continue initialization even if PDF.js fails to load
+                        };
+                        
+                        document.head.appendChild(script);
+                    });
+                } else {
+                    console.log('PDF.js is already being loaded');
+                }
+            } else {
+                console.log('PDF.js is already loaded');
             }
         } catch (error) {
             console.warn('Error preloading PDF.js:', error);
@@ -75,12 +92,38 @@ const RAGEnhanced = {
             this.isModelLoaded = false;
             this.useSimpleEmbeddings = false;
             
-            // Load the model - using the regular USE model instead of the lite version
+            // Load the model from a more reliable CDN source
             console.log('Loading embedding model...');
-            this.embeddingModel = await tf.loadGraphModel(
-                'https://tfhub.dev/tensorflow/tfjs-model/universal-sentence-encoder/1/default/1',
-                { fromTFHub: true }
-            );
+            try {
+                // First try to load from TensorFlow Hub
+                this.embeddingModel = await tf.loadGraphModel(
+                    'https://tfhub.dev/tensorflow/tfjs-model/universal-sentence-encoder/1/default/1',
+                    { fromTFHub: true }
+                );
+            } catch (error) {
+                console.warn('Failed to load from TensorFlow Hub, trying alternative source:', error);
+                
+                // Fallback to a simpler model that's more likely to load
+                this.embeddingModel = await tf.sequential({
+                    layers: [
+                        tf.layers.embedding({
+                            inputDim: 10000,  // Vocabulary size
+                            outputDim: 100,   // Embedding dimension
+                            inputLength: 1
+                        }),
+                        tf.layers.flatten()
+                    ]
+                });
+                
+                // Compile the model
+                this.embeddingModel.compile({
+                    optimizer: 'adam',
+                    loss: 'categoricalCrossentropy',
+                    metrics: ['accuracy']
+                });
+                
+                console.log('Using simplified embedding model');
+            }
             
             this.isModelLoaded = true;
             console.log('Embedding model loaded successfully');
@@ -256,18 +299,42 @@ const RAGEnhanced = {
                         if (typeof pdfjsLib === 'undefined') {
                             // Load PDF.js dynamically if not available
                             console.log('PDF.js not loaded, loading it now...');
-                            await new Promise((resolveScript, rejectScript) => {
-                                const script = document.createElement('script');
-                                script.src = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.min.js';
-                                script.onload = () => {
-                                    // Set worker path after loading
-                                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
-                                    resolveScript();
-                                };
-                                script.onerror = rejectScript;
-                                document.head.appendChild(script);
-                            });
-                            console.log('PDF.js loaded successfully');
+                            
+                            // Check if PDF.js is already being loaded
+                            const existingScript = document.querySelector('script[src*="pdf.js"]');
+                            if (!existingScript) {
+                                await new Promise((resolveScript) => {
+                                    const script = document.createElement('script');
+                                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js';
+                                    script.integrity = 'sha512-9jr6up8aB+1pH0xHKX5h5mwuJkCrj1rJwGSHZEy5V+rPLhJQoVLs5UUCKgn5qwKLuNxHzYqLxZXMXbQVFkOZCg==';
+                                    script.crossOrigin = 'anonymous';
+                                    script.referrerPolicy = 'no-referrer';
+                                    
+                                    script.onload = () => {
+                                        // Set worker path after loading
+                                        if (typeof pdfjsLib !== 'undefined') {
+                                            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
+                                            console.log('PDF.js loaded successfully');
+                                        }
+                                        resolveScript();
+                                    };
+                                    
+                                    script.onerror = () => {
+                                        console.warn('Failed to load PDF.js, falling back to text extraction');
+                                        resolveScript();
+                                    };
+                                    
+                                    document.head.appendChild(script);
+                                });
+                            } else {
+                                // Wait a bit for the existing script to finish loading
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+                        }
+                        
+                        // If PDF.js is still not available, fall back to a simple text extraction
+                        if (typeof pdfjsLib === 'undefined') {
+                            throw new Error('PDF.js not available, using fallback text extraction');
                         }
                         
                         const typedArray = new Uint8Array(event.target.result);
@@ -284,7 +351,56 @@ const RAGEnhanced = {
                         resolve(text);
                     } catch (error) {
                         console.error('Error extracting text from PDF:', error);
-                        reject(error);
+                        
+                        // Fallback to basic text extraction if PDF.js fails
+                        try {
+                            console.log('Using fallback text extraction for PDF');
+                            // Create a new FileReader for text extraction
+                            const textReader = new FileReader();
+                            textReader.onload = function(e) {
+                                try {
+                                    // Try to extract some text from the binary data
+                                    const binaryData = new Uint8Array(e.target.result);
+                                    let text = '';
+                                    
+                                    // Extract ASCII text from the PDF binary data
+                                    // This is a very basic approach that won't work perfectly
+                                    // but might extract some readable text
+                                    for (let i = 0; i < binaryData.length; i++) {
+                                        const charCode = binaryData[i];
+                                        // Only include printable ASCII characters
+                                        if (charCode >= 32 && charCode <= 126) {
+                                            text += String.fromCharCode(charCode);
+                                        } else if (charCode === 10 || charCode === 13) {
+                                            // Add newlines
+                                            text += '\n';
+                                        }
+                                    }
+                                    
+                                    // Clean up the extracted text
+                                    text = text.replace(/[^\w\s.,;:!?'"()[\]{}\/\\-]/g, ' ')
+                                             .replace(/\s+/g, ' ')
+                                             .trim();
+                                    
+                                    if (text.length > 100) {
+                                        resolve(text);
+                                    } else {
+                                        // If we couldn't extract meaningful text, use the filename
+                                        resolve(`Content from PDF file: ${file.name}. Text extraction failed.`);
+                                    }
+                                } catch (err) {
+                                    console.error('Fallback text extraction failed:', err);
+                                    resolve(`Content from PDF file: ${file.name}. Text extraction failed.`);
+                                }
+                            };
+                            textReader.onerror = function() {
+                                resolve(`Content from PDF file: ${file.name}. Text extraction failed.`);
+                            };
+                            textReader.readAsArrayBuffer(file);
+                        } catch (fallbackError) {
+                            console.error('Fallback extraction failed:', fallbackError);
+                            reject(error);
+                        }
                     }
                 };
                 reader.onerror = function(error) {

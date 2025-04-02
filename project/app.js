@@ -1,6 +1,6 @@
-// LM Studio Chat Interface - Beta 1
+// LM Studio Chat Interface - Beta 1.1
 // Version information
-const APP_VERSION = 'Beta 1';
+const APP_VERSION = 'Beta 1.1';
 
 // DOM Elements
 const chatContainer = document.getElementById('chat-container');
@@ -888,8 +888,31 @@ function createContentDiv(content, isUser) {
                 const formattedJson = formatJsonResponse(jsonData);
                 contentDiv.innerHTML = formattedJson;
             } catch (e) {
-                // If JSON parsing fails, treat as regular markdown
-                console.log("JSON parsing failed, treating as markdown:", e);
+                // If JSON parsing fails, try to handle special cases like Gemma model responses
+                console.log("JSON parsing failed, checking for special formats:", e);
+                
+                // Check for Gemma model responses with Sources pattern
+                const sourcesMatch = content.match(/Sources\s*\(\d+\)\s*\{/);
+                if (sourcesMatch) {
+                    try {
+                        // Extract the actual content from the Sources section
+                        const contentMatch = content.match(/:\s*"(.+?)"\s*\}/s);
+                        if (contentMatch && contentMatch[1]) {
+                            // Unescape the content
+                            let extractedContent = contentMatch[1]
+                                .replace(/\\n/g, '\n')
+                                .replace(/\\"/g, '"')
+                                .replace(/\\\\/g, '\\');
+                            
+                            contentDiv.innerHTML = marked.parse(extractedContent);
+                            return contentDiv;
+                        }
+                    } catch (specialFormatError) {
+                        console.log("Special format handling failed:", specialFormatError);
+                    }
+                }
+                
+                // If all special handling fails, treat as regular markdown
                 contentDiv.innerHTML = marked.parse(content);
             }
         } else {
@@ -905,6 +928,59 @@ function createContentDiv(content, isUser) {
 
 // Format JSON responses in a more readable way
 function formatJsonResponse(json) {
+    // Special handling for Gemma model responses with Sources
+    if (typeof json === 'object' && json !== null && !Array.isArray(json) && json.hasOwnProperty('Sources')) {
+        let html = '<div class="json-response">';
+        
+        // Extract the actual content from the Sources
+        if (json.Sources && Array.isArray(json.Sources) && json.Sources.length > 0) {
+            html += '<h3 class="json-title">Sources</h3>';
+            html += '<div class="sources-container">';
+            
+            json.Sources.forEach((source, index) => {
+                html += `<div class="source-item">`;
+                html += `<h4>Source ${index + 1}</h4>`;
+                if (typeof source === 'object') {
+                    for (const [key, value] of Object.entries(source)) {
+                        html += `<div><strong>${escapeHtml(key)}:</strong> ${formatJsonValue(value)}</div>`;
+                    }
+                } else {
+                    html += `<div>${formatJsonValue(source)}</div>`;
+                }
+                html += `</div>`;
+            });
+            
+            html += '</div>';
+        } else if (json.Sources && typeof json.Sources === 'object') {
+            // Handle non-array Sources object (like in the example)
+            for (const [key, value] of Object.entries(json.Sources)) {
+                if (typeof value === 'string') {
+                    // This is likely the actual content
+                    html += `<div class="model-content">${marked.parse(value)}</div>`;
+                } else {
+                    html += `<div><strong>${escapeHtml(key)}:</strong> ${formatJsonValue(value)}</div>`;
+                }
+            }
+        }
+        
+        // Add any other properties
+        const otherKeys = Object.keys(json).filter(k => k !== 'Sources');
+        if (otherKeys.length > 0) {
+            html += '<h3 class="json-title">Additional Information</h3>';
+            html += '<table class="json-table">';
+            for (const key of otherKeys) {
+                html += '<tr>';
+                html += `<td class="json-key">${escapeHtml(key)}</td>`;
+                html += `<td class="json-value">${formatJsonValue(json[key])}</td>`;
+                html += '</tr>';
+            }
+            html += '</table>';
+        }
+        
+        html += '</div>';
+        return html;
+    }
+    
     // For simple key-value objects, create a nice table
     if (typeof json === 'object' && json !== null && !Array.isArray(json)) {
         let html = '<div class="json-response">';
