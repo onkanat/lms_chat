@@ -9,6 +9,11 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 - Automatic model detection and selection
 - Clean, intuitive chat interface
 - Full chat history support for contextual conversations
+- Model-specific templates with optimal prompting formats:
+  - Auto-detection of model families (Llama, Mistral, Claude, etc.)
+  - Appropriate system prompts for each model
+  - Special tokens and formatting for each model type
+  - Stop token configuration
 - Advanced model parameter controls:
   - Temperature adjustment
   - Top P (nucleus sampling)
@@ -65,12 +70,13 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 5. Click "Connect" to establish a connection
 6. Select a model from the dropdown menu
 7. (Optional) Click "Parameters" to adjust model settings:
+   - Select an appropriate template for your model type
    - Adjust temperature for more/less randomness
    - Set Top P for nucleus sampling
    - Configure frequency and presence penalties to reduce repetition
    - Set max tokens or leave as -1 for unlimited
    - Customize the system prompt
-8. Start chatting!
+8. Start chatting! The interface will automatically format messages according to your model's requirements
 
 ### Using RAG (Retrieval-Augmented Generation)
 

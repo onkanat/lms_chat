@@ -19,11 +19,15 @@ const defaultModelParams = {
     frequency_penalty: 0.0,
     presence_penalty: 0.0,
     max_tokens: -1,
-    system_prompt: 'I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.'
+    system_prompt: 'I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.',
+    template: 'default'
 };
 
 // Current model parameters (initialized with defaults)
 let modelParams = { ...defaultModelParams };
+
+// Current model template
+let currentModelTemplate = null;
 
 // Marked.js Configuration
 marked.setOptions({
@@ -47,6 +51,7 @@ document.getElementById('frequency-penalty-slider').addEventListener('input', up
 document.getElementById('presence-penalty-slider').addEventListener('input', updatePresencePenalty);
 document.getElementById('max-tokens-input').addEventListener('input', updateMaxTokens);
 document.getElementById('system-prompt-textarea').addEventListener('input', updateSystemPrompt);
+document.getElementById('model-template-select').addEventListener('change', updateModelTemplate);
 document.getElementById('reset-params-button').addEventListener('click', resetModelParams);
 document.getElementById('save-params-button').addEventListener('click', saveModelParams);
 
@@ -54,6 +59,7 @@ document.getElementById('save-params-button').addEventListener('click', saveMode
 serverUrlInput.focus();
 createSaveButton();
 loadSavedModelParams();
+populateModelTemplates();
 
 // Functions
 function handleModelChange(e) {
@@ -62,6 +68,66 @@ function handleModelChange(e) {
     
     // Clear chat history when model changes
     clearChatHistory();
+    
+    // Auto-detect and apply the appropriate template for this model
+    autoSelectModelTemplate(currentModel);
+}
+
+// Populate the model templates dropdown
+function populateModelTemplates() {
+    const templateSelect = document.getElementById('model-template-select');
+    
+    // Clear existing options except the default
+    while (templateSelect.options.length > 1) {
+        templateSelect.remove(1);
+    }
+    
+    // Add all templates from the ModelTemplates module
+    for (const [key, template] of Object.entries(window.ModelTemplates.templates)) {
+        if (key === 'default') continue; // Skip default as it's already added
+        
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = template.name;
+        templateSelect.appendChild(option);
+    }
+}
+
+// Auto-select the appropriate template based on model name
+function autoSelectModelTemplate(modelName) {
+    if (!modelName) return;
+    
+    // Find the appropriate template
+    const template = window.ModelTemplates.findTemplateForModel(modelName);
+    const templateKey = Object.keys(window.ModelTemplates.templates).find(
+        key => window.ModelTemplates.templates[key] === template
+    ) || 'default';
+    
+    // Update the template selector
+    const templateSelect = document.getElementById('model-template-select');
+    templateSelect.value = templateKey;
+    
+    // Apply the template
+    updateModelTemplate({ target: { value: templateKey } });
+    
+    // Show a message about the auto-detected template
+    if (templateKey !== 'default') {
+        addMessage(`Auto-detected model type: ${template.name}. Applied appropriate template.`, false);
+    }
+}
+
+// Update the model template when selected
+function updateModelTemplate(e) {
+    const templateKey = e.target.value;
+    modelParams.template = templateKey;
+    
+    // Get the template
+    const template = window.ModelTemplates.templates[templateKey];
+    currentModelTemplate = template;
+    
+    // Update the system prompt with the template's default
+    document.getElementById('system-prompt-textarea').value = template.systemPrompt;
+    modelParams.system_prompt = template.systemPrompt;
 }
 
 // Function to clear chat history
@@ -220,6 +286,23 @@ function loadSavedModelParams() {
             document.getElementById('max-tokens-value').textContent = displayValue;
             
             document.getElementById('system-prompt-textarea').value = modelParams.system_prompt;
+            
+            // Set the template if it exists
+            if (modelParams.template) {
+                const templateSelect = document.getElementById('model-template-select');
+                if (templateSelect) {
+                    // Check if the template exists in the options
+                    const templateExists = Array.from(templateSelect.options).some(
+                        option => option.value === modelParams.template
+                    );
+                    
+                    if (templateExists) {
+                        templateSelect.value = modelParams.template;
+                        // Set the current template
+                        currentModelTemplate = window.ModelTemplates.templates[modelParams.template];
+                    }
+                }
+            }
         } catch (error) {
             console.error('Error loading saved model parameters:', error);
         }
@@ -265,6 +348,15 @@ function sendMessage() {
         // No RAG, just use the full chat history
         messages = messages.concat(chatHistory);
     }
+    
+    // Apply model-specific formatting if a template is selected
+    if (currentModelTemplate && currentModelTemplate.requiresSpecialHandling) {
+        messages = window.ModelTemplates.formatConversation(messages, currentModelTemplate);
+    }
+    
+    // Get stop tokens for the model if available
+    const stopTokens = currentModelTemplate ? 
+        currentModelTemplate.stopTokens || [] : [];
 
     fetch(`${serverUrlInput.value}/v1/chat/completions`, {
         method: 'POST',
@@ -277,6 +369,7 @@ function sendMessage() {
             frequency_penalty: modelParams.frequency_penalty,
             presence_penalty: modelParams.presence_penalty,
             max_tokens: modelParams.max_tokens,
+            stop: stopTokens.length > 0 ? stopTokens : undefined,
             stream: false
         })
     })
@@ -292,11 +385,29 @@ function handleResponseData(originalMessage, data, ragContext = null) {
     const stopReason = data.choices[0].finish_reason === 'stop' ? 'eosFound' : data.choices[0].finish_reason;
 
     // Add assistant response to chat history
+    // If using a template with special formatting, we store the raw content
     chatHistory.push({ role: 'assistant', content: botReply });
     
     // Add message to UI
     addMessage(botReply, false, `${totalTokens} tokens • ${timeElapsed}s • Stop: ${stopReason}`, ragContext);
     sendButton.disabled = false;
+    
+    // Show template info in the UI if a special template is being used
+    if (currentModelTemplate && currentModelTemplate.requiresSpecialHandling && 
+        currentModelTemplate.name !== 'Default Template') {
+        const templateInfo = document.createElement('div');
+        templateInfo.className = 'template-info';
+        templateInfo.textContent = `Using ${currentModelTemplate.name} template`;
+        
+        // Find the last message and append the template info
+        const lastMessage = chatContainer.querySelector('.message:last-child');
+        if (lastMessage) {
+            const metricsDiv = lastMessage.querySelector('.message-metrics');
+            if (metricsDiv) {
+                metricsDiv.appendChild(templateInfo);
+            }
+        }
+    }
 }
 
 function handleErrorSend(error) {

@@ -79,6 +79,15 @@
                 </div>
                 
                 <div class="param-group">
+                    <label for="model-template-select">Model Template:</label>
+                    <select id="model-template-select">
+                        <option value="default">Default Template</option>
+                        <!-- Other templates will be added dynamically -->
+                    </select>
+                    <div class="param-description">Select a template optimized for your model type. Templates include appropriate system prompts and message formatting.</div>
+                </div>
+                
+                <div class="param-group">
                     <label for="system-prompt-textarea">System Prompt:</label>
                     <textarea id="system-prompt-textarea" rows="3">I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.</textarea>
                     <div class="param-description">Instructions that define the AI assistant's behavior and capabilities.</div>
@@ -106,6 +115,7 @@
 
     <script src="rag/rag.js"></script>
     <script src="rag/rag-ui.js"></script>
+    <script src="model-templates.js"></script>
     <script src="app.js"></script>
     <script>
         // Initialize RAG UI after page load
