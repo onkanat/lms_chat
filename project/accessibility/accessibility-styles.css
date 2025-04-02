@@ -1,0 +1,324 @@
+/* Accessibility Styles */
+
+/* Screen Reader Only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Accessibility Toggle Button */
+.accessibility-toggle-button {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--text-color);
+    padding: 5px;
+    margin-left: 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.accessibility-toggle-button:hover {
+    background-color: rgba(var(--accent-color-rgb), 0.1);
+}
+
+.accessibility-toggle-button:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* Accessibility Panel */
+.accessibility-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 80%;
+    max-width: 600px;
+    max-height: 80vh;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+    overflow: hidden;
+}
+
+.accessibility-panel.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.accessibility-panel:focus {
+    outline: none;
+}
+
+.accessibility-panel-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.accessibility-panel-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-color);
+}
+
+.accessibility-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Accessibility Setting Group */
+.accessibility-setting-group {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.accessibility-setting-group:last-child {
+    border-bottom: none;
+}
+
+.accessibility-setting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.accessibility-setting-header h4 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.accessibility-setting-description {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* Accessibility Toggle Switch */
+.accessibility-toggle {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.accessibility-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.accessibility-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--input-background);
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.accessibility-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--text-color);
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.accessibility-toggle input:checked + .accessibility-toggle-slider {
+    background-color: var(--accent-color);
+}
+
+.accessibility-toggle input:checked + .accessibility-toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.accessibility-toggle input:focus + .accessibility-toggle-slider {
+    box-shadow: 0 0 1px var(--accent-color);
+}
+
+/* Keyboard Shortcuts Section */
+.accessibility-shortcuts-section {
+    margin-top: 20px;
+}
+
+.accessibility-shortcuts-section h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.accessibility-shortcuts-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.accessibility-shortcuts-list li {
+    display: flex;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.shortcut-key {
+    background-color: var(--input-background);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 10px;
+    font-family: monospace;
+    min-width: 80px;
+    text-align: center;
+}
+
+.shortcut-description {
+    color: var(--text-color);
+}
+
+/* Focus Indicators */
+body.using-keyboard *:focus {
+    outline: 2px solid var(--accent-color) !important;
+    outline-offset: 2px !important;
+}
+
+/* High Contrast Mode */
+body.high-contrast {
+    --background-color: #000000;
+    --text-color: #ffffff;
+    --input-background: #222222;
+    --user-message-color: #003366;
+    --assistant-message-color: #222222;
+    --button-color: #ffcc00;
+    --accent-color: #00ff00;
+    --accent-color-rgb: 0, 255, 0;
+    --danger-color: #ff0000;
+    --border-color: #ffffff;
+    --text-muted: #cccccc;
+}
+
+body.high-contrast .message {
+    border: 1px solid var(--border-color);
+}
+
+body.high-contrast button,
+body.high-contrast input,
+body.high-contrast select,
+body.high-contrast textarea {
+    border: 1px solid var(--border-color);
+}
+
+body.high-contrast a {
+    color: #ffcc00;
+    text-decoration: underline;
+}
+
+/* Large Text Mode */
+body.large-text {
+    --font-size: 18px;
+    --line-height: 1.6;
+}
+
+body.large-text .message {
+    font-size: 18px;
+}
+
+body.large-text button,
+body.large-text input,
+body.large-text select,
+body.large-text textarea {
+    font-size: 18px;
+}
+
+body.large-text .message-header,
+body.large-text .message-metrics {
+    font-size: 14px;
+}
+
+/* Reduced Motion */
+body.reduced-motion * {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Screen Reader Optimizations */
+body.screen-reader .message {
+    border: 1px solid var(--border-color);
+}
+
+body.screen-reader .user-message::before {
+    content: "User message:";
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+body.screen-reader .assistant-message::before {
+    content: "Assistant message:";
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+    .accessibility-panel {
+        width: 95%;
+        max-width: none;
+    }
+    
+    .accessibility-setting-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .accessibility-toggle {
+        margin-top: 10px;
+    }
+    
+    .accessibility-shortcuts-list li {
+        flex-direction: column;
+    }
+    
+    .shortcut-key {
+        margin-bottom: 5px;
+    }
+    
+    /* Ensure touch targets are at least 44px */
+    .accessibility-toggle-button,
+    .accessibility-toggle,
+    .accessibility-toggle-slider,
+    .close-panel-button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
