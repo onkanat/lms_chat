@@ -379,7 +379,17 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is open source and available under the MIT License.
+This project is licensed under the "USE IT, FIX IT, ADD TO IT" License - see the [LICENSE](LICENSE) file for details.
+
+In short:
+- USE IT IF IT WORKS: Use it for any purpose without restriction
+- FIX IT IF IT'S BROKEN: Feel free to fix any issues you encounter
+- ADD IT IF YOU HAVE AN IDEA: Extend and enhance as you see fit
+
+## Credits
+
+- Program's idea and draft creator: Hakan KILIÇASLAN
+- Code and programming: [OpenHands](https://all-hands.dev)
 
 ## Acknowledgements
 
