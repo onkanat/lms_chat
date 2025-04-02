@@ -502,16 +502,27 @@ const RAGEnhanced = {
                 const batch = chunks.slice(i, i + batchSize);
                 const texts = batch.map(chunk => chunk.content);
                 
-                // Generate embeddings
-                const embeddings = await this.embeddingModel.embed(texts);
+                // Generate embeddings using Universal Sentence Encoder
+                // The model doesn't have an 'embed' method directly, we need to call the model itself
+                const embeddings = await Promise.all(texts.map(async (text) => {
+                    // Convert text to tensor and get embedding
+                    const textTensor = tf.tensor1d([text], 'string');
+                    const result = this.embeddingModel.predict(textTensor);
+                    
+                    // Get the embedding data
+                    const embedding = Array.from(await result.data());
+                    
+                    // Clean up tensors
+                    textTensor.dispose();
+                    result.dispose();
+                    
+                    return embedding;
+                }));
                 
                 // Store embeddings in chunks
                 for (let j = 0; j < batch.length; j++) {
-                    batch[j].embedding = Array.from(embeddings.slice([j, 0], [1, -1]).dataSync());
+                    batch[j].embedding = embeddings[j];
                 }
-                
-                // Free memory
-                embeddings.dispose();
             }
             
             return true;
