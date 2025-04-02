@@ -33,6 +33,31 @@ const RAGEnhanced = {
         // Load saved settings from localStorage
         this.loadSettings();
         
+        // Preload PDF.js if not already loaded
+        try {
+            if (typeof pdfjsLib === 'undefined') {
+                console.log('Preloading PDF.js...');
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.min.js';
+                    script.onload = () => {
+                        // Set worker path after loading
+                        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
+                        console.log('PDF.js preloaded successfully');
+                        resolve();
+                    };
+                    script.onerror = (error) => {
+                        console.warn('Failed to preload PDF.js, will load on demand:', error);
+                        resolve(); // Continue initialization even if PDF.js fails to load
+                    };
+                    document.head.appendChild(script);
+                });
+            }
+        } catch (error) {
+            console.warn('Error preloading PDF.js:', error);
+            // Continue initialization even if PDF.js fails to load
+        }
+        
         // Initialize the embedding model
         try {
             await this.initEmbeddingModel();
@@ -216,6 +241,24 @@ const RAGEnhanced = {
             return new Promise((resolve, reject) => {
                 reader.onload = async function(event) {
                     try {
+                        // Check if PDF.js is available
+                        if (typeof pdfjsLib === 'undefined') {
+                            // Load PDF.js dynamically if not available
+                            console.log('PDF.js not loaded, loading it now...');
+                            await new Promise((resolveScript, rejectScript) => {
+                                const script = document.createElement('script');
+                                script.src = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.min.js';
+                                script.onload = () => {
+                                    // Set worker path after loading
+                                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
+                                    resolveScript();
+                                };
+                                script.onerror = rejectScript;
+                                document.head.appendChild(script);
+                            });
+                            console.log('PDF.js loaded successfully');
+                        }
+                        
                         const typedArray = new Uint8Array(event.target.result);
                         const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
                         
@@ -229,10 +272,14 @@ const RAGEnhanced = {
                         
                         resolve(text);
                     } catch (error) {
+                        console.error('Error extracting text from PDF:', error);
                         reject(error);
                     }
                 };
-                reader.onerror = reject;
+                reader.onerror = function(error) {
+                    console.error('Error reading file:', error);
+                    reject(error);
+                };
                 reader.readAsArrayBuffer(file);
             });
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
@@ -455,16 +502,27 @@ const RAGEnhanced = {
                 const batch = chunks.slice(i, i + batchSize);
                 const texts = batch.map(chunk => chunk.content);
                 
-                // Generate embeddings
-                const embeddings = await this.embeddingModel.embed(texts);
+                // Generate embeddings using Universal Sentence Encoder
+                // The model doesn't have an 'embed' method directly, we need to call the model itself
+                const embeddings = await Promise.all(texts.map(async (text) => {
+                    // Convert text to tensor and get embedding
+                    const textTensor = tf.tensor1d([text], 'string');
+                    const result = this.embeddingModel.predict(textTensor);
+                    
+                    // Get the embedding data
+                    const embedding = Array.from(await result.data());
+                    
+                    // Clean up tensors
+                    textTensor.dispose();
+                    result.dispose();
+                    
+                    return embedding;
+                }));
                 
                 // Store embeddings in chunks
                 for (let j = 0; j < batch.length; j++) {
-                    batch[j].embedding = Array.from(embeddings.slice([j, 0], [1, -1]).dataSync());
+                    batch[j].embedding = embeddings[j];
                 }
-                
-                // Free memory
-                embeddings.dispose();
             }
             
             return true;
