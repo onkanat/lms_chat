@@ -576,4 +576,61 @@ body, html {
         width: 12px;
         height: 12px;
     }
+}
+
+/* Styles for model responses with Sources */
+.sources-container {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: rgba(var(--accent-color-rgb), 0.1);
+}
+
+.source-item {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-left: 3px solid var(--accent-color);
+    background-color: rgba(var(--accent-color-rgb), 0.05);
+}
+
+.source-item h4 {
+    margin-top: 0;
+    color: var(--accent-color);
+}
+
+.model-content {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: var(--assistant-message-color);
+}
+
+.json-response {
+    padding: 10px;
+    border-radius: 5px;
+    background-color: rgba(var(--accent-color-rgb), 0.05);
+}
+
+.json-title {
+    margin-top: 0;
+    color: var(--accent-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.json-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.json-key {
+    font-weight: bold;
+    padding: 5px;
+    vertical-align: top;
+    width: 30%;
+}
+
+.json-value {
+    padding: 5px;
+    word-break: break-word;
 } 
