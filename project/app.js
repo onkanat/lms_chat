@@ -1,6 +1,6 @@
-// LM Studio Chat Interface - Beta 1
+// LM Studio Chat Interface - Beta 1.1
 // Version information
-const APP_VERSION = 'Beta 1';
+const APP_VERSION = 'Beta 1.1';
 
 // DOM Elements
 const chatContainer = document.getElementById('chat-container');
