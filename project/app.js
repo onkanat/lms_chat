@@ -417,7 +417,7 @@ function finalizeStreamingMessage(messageId, content, totalTokens, timeElapsed, 
     sendButton.disabled = false;
 }
 
-function sendMessage() {
+async function sendMessage() {
     const message = userInput.value.trim();
     if (!message || !isConnected) return;
 
@@ -430,6 +430,9 @@ function sendMessage() {
     userInput.value = '';
     sendButton.disabled = true;
     
+    // Check if agents are enabled
+    const agentsEnabled = window.AgentManager?.getActiveState() || false;
+    
     // Check if RAG is enabled (either standard or enhanced)
     const ragEnabled = document.getElementById('rag-toggle')?.checked || false;
     const ragEnhancedEnabled = document.getElementById('rag-enhanced-toggle')?.checked || false;
@@ -439,6 +442,35 @@ function sendMessage() {
     
     // Start with system message
     messages.push({ role: 'system', content: modelParams.system_prompt });
+    
+    // Process message with agents if enabled
+    if (agentsEnabled && window.AgentManager) {
+        try {
+            // Process the message with agents
+            const agentResult = await window.AgentManager.processMessage(message);
+            
+            if (agentResult.processed) {
+                // Use the processed message with tool results
+                userPrompt = agentResult.message;
+                
+                // Update the user message in chat history
+                chatHistory[chatHistory.length - 1].content = userPrompt;
+                
+                // Update the displayed message
+                const userMessages = document.querySelectorAll('.user-message');
+                if (userMessages.length > 0) {
+                    const lastUserMessage = userMessages[userMessages.length - 1];
+                    const contentDiv = lastUserMessage.querySelector('.message-content');
+                    if (contentDiv) {
+                        contentDiv.innerHTML = marked.parse(userPrompt);
+                        processCodeBlocksAndMathJax(contentDiv);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error processing message with agents:', error);
+        }
+    }
     
     // If enhanced RAG is enabled and we have documents, use it
     if (ragEnhancedEnabled && window.RAGEnhanced && window.RAGEnhanced.getDocumentCount() > 0) {

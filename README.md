@@ -43,6 +43,13 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
   - Organize conversations into folders
   - Easily switch between different conversations
   - Automatic tracking of unsaved changes
+- Agent system with toolcalls:
+  - Web search for finding information online
+  - Web browsing for accessing specific websites
+  - Web scraping for extracting structured data
+  - arXiv integration for academic paper search and download
+  - Engineering calculator for mathematical computations
+  - Simple syntax for invoking tools in messages
 - Prompt library:
   - Categorized prompt templates for different use cases
   - Custom prompt creation and management
@@ -199,6 +206,36 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 
 > **Note:** All processing happens locally in your browser - no data is sent to external servers for embedding or retrieval.
 
+### Using the Agent System
+
+1. Click the agent toggle (🤖) in the top menu to enable the agent system
+2. Open the agent panel to view available tools and usage instructions
+3. Use tools in your messages with the following syntax:
+   ```
+   {{tool_name(param1="value1", param2="value2")}}
+   ```
+4. Available tools:
+   - Web Search: `{{search(query="your search query")}}`
+   - Web Browsing: `{{browse(url="https://example.com")}}`
+   - Web Scraping: `{{scrape(url="https://example.com", selector=".main-content")}}`
+   - arXiv Search: `{{arxivSearch(query="machine learning", max_results="3")}}`
+   - arXiv Download: `{{arxivDownload(paper_id="2303.08774")}}`
+   - Calculator: `{{calculate(expression="5 * sin(45 deg) + sqrt(16)")}}`
+5. The agent will process your tool calls and include the results in your message
+6. The AI will then respond based on the augmented message with tool results
+7. You can combine multiple tool calls in a single message
+
+Example:
+```
+I'm researching the latest developments in transformer models.
+
+{{search(query="recent transformer model developments")}}
+
+Can you also find a specific paper on this topic?
+
+{{arxivSearch(query="transformer neural networks", max_results="1")}}
+```
+
 ### Accessibility Features
 
 1. Click the accessibility button (♿) in the top menu to open accessibility settings
@@ -240,6 +277,16 @@ lms_chat/
 │   ├── model-templates.js    # Model-specific templates
 │   ├── p_editor.html         # Popup text editor
 │   ├── chat/                 # Additional chat components
+│   ├── agents/               # Agent system with toolcalls
+│   │   ├── agent-manager.js           # Agent system core
+│   │   ├── web-search-agent.js        # Web search functionality
+│   │   ├── web-browse-agent.js        # Web browsing functionality
+│   │   ├── web-scrape-agent.js        # Web scraping functionality
+│   │   ├── arxiv-search-agent.js      # arXiv search functionality
+│   │   ├── arxiv-download-agent.js    # arXiv paper download
+│   │   ├── calculator-agent.js        # Engineering calculator
+│   │   ├── agent-ui.js                # Agent UI components
+│   │   └── agent-styles.css           # Agent styling
 │   ├── rag/                  # Basic RAG functionality
 │   │   ├── rag.js            # Core RAG implementation
 │   │   ├── rag-ui.js         # RAG user interface components
@@ -282,6 +329,15 @@ lms_chat/
 - `prompts/prompt-library.js` - Prompt template management and processing
 - `prompts/prompt-ui.js` - Prompt library UI components
 - `prompts/prompt-styles.css` - Styling for prompt library
+- `agents/agent-manager.js` - Core agent system for handling toolcalls
+- `agents/web-search-agent.js` - Web search functionality
+- `agents/web-browse-agent.js` - Web browsing functionality
+- `agents/web-scrape-agent.js` - Web scraping functionality
+- `agents/arxiv-search-agent.js` - arXiv search functionality
+- `agents/arxiv-download-agent.js` - arXiv paper download functionality
+- `agents/calculator-agent.js` - Engineering calculator functionality
+- `agents/agent-ui.js` - Agent UI components
+- `agents/agent-styles.css` - Styling for agent system
 - `accessibility/accessibility.js` - Accessibility features and keyboard navigation
 - `accessibility/accessibility-styles.css` - Accessibility-related styling
 - `conversations/conversation-manager.js` - Conversation saving and loading logic

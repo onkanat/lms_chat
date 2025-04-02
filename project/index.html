@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="themes/theme-styles.css">
     <link rel="stylesheet" href="prompts/prompt-styles.css">
     <link rel="stylesheet" href="accessibility/accessibility-styles.css">
+    <link rel="stylesheet" href="agents/agent-styles.css">
     <title>LM Studio Chat</title>
 </head>
 <body>
@@ -147,6 +148,14 @@
     <script src="prompts/prompt-library.js"></script>
     <script src="prompts/prompt-ui.js"></script>
     <script src="accessibility/accessibility.js"></script>
+    <script src="agents/agent-manager.js"></script>
+    <script src="agents/web-search-agent.js"></script>
+    <script src="agents/web-browse-agent.js"></script>
+    <script src="agents/web-scrape-agent.js"></script>
+    <script src="agents/arxiv-search-agent.js"></script>
+    <script src="agents/arxiv-download-agent.js"></script>
+    <script src="agents/calculator-agent.js"></script>
+    <script src="agents/agent-ui.js"></script>
     <script src="app.js"></script>
     <script>
         // Initialize UI components after page load
@@ -162,6 +171,9 @@
             window.PromptLibrary.init();
             window.PromptUI.init();
             window.Accessibility.init();
+            window.AgentManager.init().then(() => {
+                window.AgentUI.init();
+            });
         });
     </script>
 </body>
