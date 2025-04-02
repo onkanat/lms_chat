@@ -33,6 +33,31 @@ const RAGEnhanced = {
         // Load saved settings from localStorage
         this.loadSettings();
         
+        // Preload PDF.js if not already loaded
+        try {
+            if (typeof pdfjsLib === 'undefined') {
+                console.log('Preloading PDF.js...');
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.min.js';
+                    script.onload = () => {
+                        // Set worker path after loading
+                        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
+                        console.log('PDF.js preloaded successfully');
+                        resolve();
+                    };
+                    script.onerror = (error) => {
+                        console.warn('Failed to preload PDF.js, will load on demand:', error);
+                        resolve(); // Continue initialization even if PDF.js fails to load
+                    };
+                    document.head.appendChild(script);
+                });
+            }
+        } catch (error) {
+            console.warn('Error preloading PDF.js:', error);
+            // Continue initialization even if PDF.js fails to load
+        }
+        
         // Initialize the embedding model
         try {
             await this.initEmbeddingModel();
@@ -216,6 +241,24 @@ const RAGEnhanced = {
             return new Promise((resolve, reject) => {
                 reader.onload = async function(event) {
                     try {
+                        // Check if PDF.js is available
+                        if (typeof pdfjsLib === 'undefined') {
+                            // Load PDF.js dynamically if not available
+                            console.log('PDF.js not loaded, loading it now...');
+                            await new Promise((resolveScript, rejectScript) => {
+                                const script = document.createElement('script');
+                                script.src = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.min.js';
+                                script.onload = () => {
+                                    // Set worker path after loading
+                                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
+                                    resolveScript();
+                                };
+                                script.onerror = rejectScript;
+                                document.head.appendChild(script);
+                            });
+                            console.log('PDF.js loaded successfully');
+                        }
+                        
                         const typedArray = new Uint8Array(event.target.result);
                         const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
                         
@@ -229,10 +272,14 @@ const RAGEnhanced = {
                         
                         resolve(text);
                     } catch (error) {
+                        console.error('Error extracting text from PDF:', error);
                         reject(error);
                     }
                 };
-                reader.onerror = reject;
+                reader.onerror = function(error) {
+                    console.error('Error reading file:', error);
+                    reject(error);
+                };
                 reader.readAsArrayBuffer(file);
             });
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
