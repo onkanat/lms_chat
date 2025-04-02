@@ -66,7 +66,7 @@ const PRESET_PROMPTS = {
                 id: 'programming-debug',
                 name: 'Debug Code',
                 description: 'Help debug a piece of code',
-                prompt: 'The following {language} code has a bug:\n\n```{language}\n{code}\n```\n\nThe error I'm getting is: {error}\n\nPlease help me identify and fix the bug. Explain what's wrong and provide the corrected code.',
+                prompt: 'The following {language} code has a bug:\n\n```{language}\n{code}\n```\n\nThe error I am getting is: {error}\n\nPlease help me identify and fix the bug. Explain what\'s wrong and provide the corrected code.',
                 variables: [
                     { name: 'language', description: 'Programming language', default: 'JavaScript' },
                     { name: 'code', description: 'Code with bug', default: 'function calculateSum(numbers) {\n  let sum;\n  for (let i = 0; i < numbers.length; i++) {\n    sum += numbers[i];\n  }\n  return sum;\n}' },

@@ -25,8 +25,12 @@
     <script src="https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
     <script>
-        // Set PDF.js worker path
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
+        // Set PDF.js worker path after the script has loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof pdfjsLib !== 'undefined') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
+            }
+        });
     </script>
     
     <!-- Custom Styles and Scripts -->
@@ -161,20 +165,35 @@
     <script>
         // Initialize UI components after page load
         document.addEventListener('DOMContentLoaded', function() {
-            window.ThemeManager.init();
-            window.ThemeUI.init();
-            window.RAGUI.init();
-            window.RAGEnhanced.init().then(() => {
-                window.RAGEnhancedUI.init();
-            });
-            window.ConversationUI.init();
-            window.ConversationManager.init();
-            window.PromptLibrary.init();
-            window.PromptUI.init();
-            window.Accessibility.init();
-            window.AgentManager.init().then(() => {
-                window.AgentUI.init();
-            });
+            // Initialize theme components
+            if (window.ThemeManager) window.ThemeManager.init();
+            if (window.ThemeUI) window.ThemeUI.init();
+            
+            // Initialize RAG components
+            if (window.RAGUI) window.RAGUI.init();
+            if (window.RAGEnhanced) {
+                window.RAGEnhanced.init().then(() => {
+                    if (window.RAGEnhancedUI) window.RAGEnhancedUI.init();
+                }).catch(err => console.error('Error initializing RAG Enhanced:', err));
+            }
+            
+            // Initialize conversation components
+            if (window.ConversationUI) window.ConversationUI.init();
+            if (window.ConversationManager) window.ConversationManager.init();
+            
+            // Initialize prompt components
+            if (window.PromptLibrary) window.PromptLibrary.init();
+            if (window.PromptUI) window.PromptUI.init();
+            
+            // Initialize accessibility
+            if (window.Accessibility) window.Accessibility.init();
+            
+            // Initialize agent components
+            if (window.AgentManager) {
+                window.AgentManager.init().then(() => {
+                    if (window.AgentUI) window.AgentUI.init();
+                }).catch(err => console.error('Error initializing Agent Manager:', err));
+            }
         });
     </script>
 </body>

@@ -580,13 +580,13 @@ const RAGEnhancedUI = {
         const retrievalStrategySelect = document.createElement('select');
         retrievalStrategySelect.id = 'rag-enhanced-retrieval-strategy';
         
-        const strategies = [
+        const retrievalStrategies = [
             { value: 'keyword', label: 'Keyword' },
             { value: 'semantic', label: 'Semantic' },
             { value: 'hybrid', label: 'Hybrid (Keyword + Semantic)' }
         ];
         
-        for (const strategy of strategies) {
+        for (const strategy of retrievalStrategies) {
             const option = document.createElement('option');
             option.value = strategy.value;
             option.textContent = strategy.label;
