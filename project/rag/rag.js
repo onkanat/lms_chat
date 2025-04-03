@@ -42,7 +42,7 @@ function loadDocumentsFromLocalStorage() {
 
 // Process and add a document to the store
 function addDocument(file, content, type) {
-    const documentId = generateId();
+    const documentId = RAGCoreUtils.generateId();
     const document = {
         id: documentId,
         name: file.name,
@@ -53,44 +53,21 @@ function addDocument(file, content, type) {
     
     documentStore.documents.push(document);
     
-    // Process document into chunks
-    const chunks = chunkDocument(document);
-    documentStore.chunks.push(...chunks);
+    const rawChunks = RAGCoreUtils.chunkDocument(document.content);
+    const processedChunks = rawChunks.map((c, idx) => ({
+        id: `${documentId}-chunk-${idx}`,
+        documentId: documentId,
+        documentName: file.name,
+        content: c,
+        startChar: idx * 500,
+        endChar: (idx * 500) + c.length
+    }));
+    documentStore.chunks.push(...processedChunks);
     
     saveDocumentsToLocalStorage();
     updateDocumentList();
     
     return documentId;
-}
-
-// Generate a simple ID
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-}
-
-// Chunk a document into smaller pieces
-function chunkDocument(document) {
-    const content = document.content;
-    const chunkSize = 500; // characters
-    const overlap = 100;
-    const chunks = [];
-    
-    // Simple chunking by character count with overlap
-    for (let i = 0; i < content.length; i += chunkSize - overlap) {
-        const chunkText = content.substr(i, chunkSize);
-        if (chunkText.length < 50) continue; // Skip very small chunks
-        
-        chunks.push({
-            id: `${document.id}-chunk-${chunks.length}`,
-            documentId: document.id,
-            documentName: document.name,
-            content: chunkText,
-            startChar: i,
-            endChar: i + chunkText.length
-        });
-    }
-    
-    return chunks;
 }
 
 // Retrieve relevant chunks for a query

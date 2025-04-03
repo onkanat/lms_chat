@@ -407,11 +407,20 @@ function finalizeStreamingMessage(messageId, content, totalTokens, timeElapsed, 
     // Update content one last time
     updateStreamingMessage(messageId, content);
     
+    // Token/saniye hızı hesaplama
+    let tokenPerSecond = '?';
+    if (totalTokens && parseFloat(timeElapsed) > 0) {
+        const tokensNum = typeof totalTokens === 'number' ? totalTokens : parseInt(totalTokens);
+        if (!isNaN(tokensNum)) {
+            tokenPerSecond = Math.round(tokensNum / parseFloat(timeElapsed));
+        }
+    }
+
     // Update metrics
     const metricsDiv = messageDiv.querySelector('.message-metrics');
     if (metricsDiv) {
         const stopReasonText = stopReason === 'stop' ? 'eosFound' : stopReason;
-        metricsDiv.textContent = `${totalTokens || '?'} tokens • ${timeElapsed || '0.00'}s • Stop: ${stopReasonText}`;
+        metricsDiv.textContent = `${totalTokens || '?'} tokens • ${tokenPerSecond} token/s • ${timeElapsed || '0.00'}s • Stop: ${stopReasonText}`;
         
         // Show template info if a special template is being used
         if (currentModelTemplate && currentModelTemplate.requiresSpecialHandling && 
@@ -443,6 +452,9 @@ async function sendMessage() {
     userInput.value = '';
     sendButton.disabled = true;
     
+    // İstek başlangıç zamanı burada tanımlanmalı
+    const requestStartTime = performance.now();
+
     // Check if agents are enabled
     const agentsEnabled = window.AgentManager?.getActiveState() || false;
     
@@ -588,14 +600,13 @@ async function sendMessage() {
             let buffer = '';
             let fullContent = '';
             let totalTokens = 0;
-            let startTime = performance.now();
             
             // Process the stream
             function processStream() {
                 return reader.read().then(({ done, value }) => {
                     if (done) {
                         // Stream is complete, finalize the message
-                        const timeElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+                        const timeElapsed = ((performance.now() - requestStartTime) / 1000).toFixed(2);
                         finalizeStreamingMessage(assistantMessageId, fullContent, totalTokens, timeElapsed, 'stop', ragContext);
                         return;
                     }
@@ -654,23 +665,35 @@ async function sendMessage() {
             body: JSON.stringify(requestBody)
         })
         .then(response => response.json())
-        .then(data => handleResponseData(message, data, ragContext))
+        .then(data => handleResponseData(message, data, ragContext, requestStartTime)) // startTime'ı geçir
         .catch(error => handleErrorSend(error));
     }
 }
 
-function handleResponseData(originalMessage, data, ragContext = null) {
+function handleResponseData(originalMessage, data, ragContext = null, requestStartTime = null) {
     const botReply = data.choices[0].message.content;
-    const totalTokens = data.usage.total_tokens;
-    const timeElapsed = ((performance.now() - performance.now()) / 1000).toFixed(2);
+    const totalTokens = data.usage?.total_tokens || '?'; // Güvenli erişim
+    
+    // Eğer requestStartTime geçerli bir değerse kullan, değilse makul bir varsayılan değer koy
+    const startTime = requestStartTime || performance.now();
+    const timeElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+    
     const stopReason = data.choices[0].finish_reason === 'stop' ? 'eosFound' : data.choices[0].finish_reason;
+    
+    // Token/saniye hızı hesaplama - daha güvenli tip kontrolü ile
+    let tokenPerSecond = '?';
+    if (totalTokens !== '?' && parseFloat(timeElapsed) > 0) {
+        const tokensNum = typeof totalTokens === 'number' ? totalTokens : parseInt(totalTokens);
+        if (!isNaN(tokensNum)) {
+            tokenPerSecond = Math.round(tokensNum / parseFloat(timeElapsed));
+        }
+    }
 
     // Add assistant response to chat history
-    // If using a template with special formatting, we store the raw content
     chatHistory.push({ role: 'assistant', content: botReply });
     
-    // Add message to UI
-    addMessage(botReply, false, `${totalTokens} tokens • ${timeElapsed}s • Stop: ${stopReason}`, ragContext);
+    // Add message to UI with token/sec bilgisi
+    addMessage(botReply, false, `${totalTokens} tokens • ${tokenPerSecond} token/s • ${timeElapsed}s • Stop: ${stopReason}`, ragContext);
     sendButton.disabled = false;
     
     // Show template info in the UI if a special template is being used
@@ -1159,9 +1182,30 @@ document.addEventListener('keydown', function(event) {
 });
 
 window.addEventListener('message', function(event) {
-    const text = event.data;
-    const userInput = document.getElementById('user-input');
-    userInput.value = text;
+    // Yapılandırılmış mesaj kontrolü
+    if (typeof event.data === 'object' && event.data !== null) {
+        if (event.data.type === "editor-content" && event.data.source === "p_editor") {
+            // p_editor'den gelen prompt mesajı - sadece kullanıcı girdisine yaz
+            const text = event.data.content;
+            const userInput = document.getElementById('user-input');
+            if (userInput) {
+                userInput.value = text;
+                userInput.focus();
+            }
+            return; // Diğer işlemlere devam etme
+        }
+        
+        // Diğer türde mesajları normal işle
+        return;
+    }
+    
+    // Geriye dönük uyumluluk: string formatındaki basit mesajlar
+    if (typeof event.data === 'string') {
+        const userInput = document.getElementById('user-input');
+        if (userInput) {
+            userInput.value = event.data;
+        }
+    }
 });
 
 // RAG sistemlerini başlatma fonksiyonu

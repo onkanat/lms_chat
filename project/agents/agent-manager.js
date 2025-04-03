@@ -35,6 +35,14 @@ const AgentManager = {
             this.registerAgent('arxivDownload', window.ArxivDownloadAgent);
             this.registerAgent('calculator', window.CalculatorAgent);
             
+            // Check if WeatherAgent is defined before registering
+            if (window.WeatherAgent) {
+                this.registerAgent('weather', window.WeatherAgent);
+            } else {
+                console.warn('WeatherAgent is not defined. Skipping registration.');
+            }
+
+            
             console.log(`Loaded ${Object.keys(this.agents).length} agents`);
         } catch (error) {
             console.error('Error loading agents:', error);
@@ -48,7 +56,7 @@ const AgentManager = {
             console.log(`Registered agent: ${name}`);
         }
     },
-    
+
     // Load settings from localStorage
     loadSettings() {
         try {
@@ -243,7 +251,13 @@ const AgentManager = {
             // Calculator Agent
             'calculate': 'calculator',
             'solve': 'calculator',
-            'compute': 'calculator'
+            'compute': 'calculator',
+            
+            // Weather Agent
+            'weather': 'weather',
+            'getWeather': 'weather',
+            'weatherForecast': 'weather',
+            'getWeatherForecast': 'weather'
         };
         
         return toolToAgentMap[toolName];
@@ -309,6 +323,19 @@ const AgentManager = {
                     { name: 'precision', description: 'Number of decimal places', required: false, default: '4' }
                 ],
                 example: '{{calculate(expression="5 * sin(45 deg) + sqrt(16)", precision="2")}}'
+            },
+            {
+                name: 'weatherAgent',
+                description: 'Retrieve weather data from multiple sources',
+                parameters: [
+                    { name: 'location', description: 'Location to get weather data for', required: true },
+                    { name: 'Current Conditions', description: 'Current weather conditions', required: false },
+                    { name: '24 Hours Historical', description: 'Historical weather data for the last 24 hours', required: false },
+                    { name: 'Daily Forecast 5 Days', description: '5-day weather forecast', required: false },
+                    { name: 'Hourly Forecast 12 Hours', description: '12-hour weather forecast', required: false },
+                    { name: 'Indices', description: 'Weather indices (e.g., UV index)', required: false }
+                ],
+                example: '{{weather(location="New York", Current Conditions=true, Daily Forecast 5 Days=true)}}'
             }
         ];
     }
@@ -316,3 +343,4 @@ const AgentManager = {
 
 // Export the Agent Manager
 window.AgentManager = AgentManager;
+

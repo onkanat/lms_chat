@@ -356,7 +356,12 @@
         // Send button handler
         document.getElementById('sendButton').addEventListener('click', function() {
             const text = editor.value;
-            window.opener.postMessage(text, '*');
+            // Daha belirleyici bir mesaj formatı kullan
+            window.opener.postMessage({
+                type: "editor-content",
+                source: "p_editor", 
+                content: text
+            }, '*');
             window.close();
         });
         
