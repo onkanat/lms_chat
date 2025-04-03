@@ -139,7 +139,7 @@ const Accessibility = {
             }
             
             // Mod+P to open prompt library
-            if (modKey && e.key === 'p') {
+            if (modKey && e.key === 'l') {
                 const promptPanel = document.getElementById('prompt-panel');
                 if (promptPanel) {
                     promptPanel.classList.toggle('visible');
@@ -399,10 +399,11 @@ const Accessibility = {
         // Detect if user is on macOS
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const modKey = isMac ? '⌘' : 'Alt';
+        const optKey = isMac ? '⌥' : 'Shift';
         
         const shortcuts = [
             { key: `${modKey}+A`, description: 'Open accessibility settings' },
-            { key: `${modKey}+P`, description: 'Open prompt library' },
+            { key: `${modKey}+L`, description: 'Open prompt library' },
             { key: `${modKey}+T`, description: 'Open theme settings' },
             { key: `${modKey}+C`, description: 'Open conversation manager' },
             { key: `${modKey}+R`, description: 'Open RAG panel' },

@@ -134,17 +134,16 @@ const RAGEnhanced = {
             const content = await this.readFileContent(file);
             
             // Belge oluştur
-            const docId = this.generateId();
-            const document = {
+            const docId = RAGCoreUtils.generateId();
+            const docObj = {
                 id: docId,
                 name: file.name,
-                size: file.size,
-                type: file.type,
+                content: content,
                 dateAdded: new Date().toISOString()
             };
             
             // Belgeyi kaydet
-            this.documents.push(document);
+            this.documents.push(docObj);
             
             // Belgeyi parçala
             const chunks = await this.chunkDocument(docId, file.name, content);
@@ -178,48 +177,15 @@ const RAGEnhanced = {
     async chunkDocument(docId, docName, content) {
         console.log(`"${docName}" belgesi parçalanıyor... (Strateji: ${this.settings.chunkingStrategy})`);
         
-        const chunks = [];
-        
-        // Parçalama stratejisine göre parçala
-        switch (this.settings.chunkingStrategy) {
-            case 'paragraph':
-                // Paragraf bazlı parçalama
-                const paragraphs = content.split(/\n\s*\n/);
-                for (let i = 0; i < paragraphs.length; i++) {
-                    const para = paragraphs[i].trim();
-                    if (para.length < 20) continue; // Çok kısa paragrafları atla
-                    
-                    chunks.push({
-                        id: `${docId}-chunk-${i}`,
-                        documentId: docId,
-                        documentName: docName,
-                        content: para,
-                        startPos: i,
-                        endPos: i
-                    });
-                }
-                break;
-                
-            case 'fixed':
-            default:
-                // Sabit boyutlu parçalama (varsayılan)
-                const chunkSize = this.settings.chunkSize;
-                const overlap = this.settings.chunkOverlap;
-                
-                for (let i = 0; i < content.length; i += (chunkSize - overlap)) {
-                    const chunkText = content.substr(i, chunkSize);
-                    if (chunkText.length < 50) continue; // Çok kısa parçaları atla
-                    
-                    chunks.push({
-                        id: `${docId}-chunk-${chunks.length}`,
-                        documentId: docId,
-                        documentName: docName,
-                        content: chunkText,
-                        startPos: i,
-                        endPos: i + chunkText.length
-                    });
-                }
-        }
+        const rawChunks = RAGCoreUtils.chunkDocument(content, this.settings.chunkSize, this.settings.chunkOverlap);
+        const chunks = rawChunks.map((c, idx) => ({
+            id: `${docId}-chunk-${idx}`,
+            documentId: docId,
+            documentName: docName,
+            content: c,
+            startChar: idx * this.settings.chunkSize,
+            endChar: (idx * this.settings.chunkSize) + c.length
+        }));
         
         console.log(`"${docName}" belgesi için ${chunks.length} parça oluşturuldu`);
         return chunks;
@@ -487,30 +453,17 @@ const RAGEnhanced = {
         console.log('Semantik arama yapılıyor...');
         
         try {
-            // Query embeddingi oluştur
             const queryEmbedding = await this.createEmbedding(query);
-            
             if (!queryEmbedding) {
                 throw new Error('Query embedding oluşturulamadı');
             }
             
-            // Her parça için benzerlik hesapla
             const scoredChunks = await Promise.all(this.chunks.map(async chunk => {
-                const chunkId = chunk.id;
-                const chunkEmbedding = this.embeddings[chunkId];
+                const chunkEmbedding = this.getEmbedding(chunk.id);
+                if (!chunkEmbedding) return { chunk, score: 0 };
                 
-                if (!chunkEmbedding) {
-                    console.warn(`${chunkId} için embedding bulunamadı`);
-                    return { chunk, score: 0 };
-                }
-                
-                // Kosinüs benzerliği hesapla
                 const similarityScore = this.cosineSimilarity(queryEmbedding, chunkEmbedding);
-                
-                return {
-                    chunk,
-                    score: similarityScore
-                };
+                return { chunk, score: similarityScore };
             }));
             
             console.log(`Semantik arama tamamlandı: ${scoredChunks.length} sonuç`);
@@ -567,6 +520,13 @@ const RAGEnhanced = {
         }
         
         return dotProduct / (normA * normB);
+    },
+    
+    // Embedding alma
+    getEmbedding(chunkId) {
+        const embedding = this.embeddings[chunkId];
+        if (!embedding) console.warn(`${chunkId} için embedding bulunamadı`);
+        return embedding || null;
     },
     
     // Yerel depoya kaydet
@@ -643,10 +603,6 @@ const RAGEnhanced = {
     },
     
     // Yardımcı fonksiyonlar
-    generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substring(2);
-    },
-    
     deleteDocument(docId) {
         // Belgeyi sil
         this.documents = this.documents.filter(doc => doc.id !== docId);
