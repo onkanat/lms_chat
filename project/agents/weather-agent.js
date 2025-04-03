@@ -7,7 +7,7 @@ class WeatherAgent {
   constructor() {
     this.locationKey = null;
     this.weather_data = {};
-    this.apiKey = 'OVSZwJOANEAXRVMvtt2NyHnWyFGaAJ2C'; // Replace with your actual API key
+    this.apiKey = ''; // Replace with your actual API key
   }
 
   async execute(toolName, { location }) {
