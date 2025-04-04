@@ -3,3 +3,8 @@ test-result
 test/test_README.spec.js
 node_modules
 playwright-report
+test
+test-result
+test/test_README.spec.js
+node_modules
+playwright-report
