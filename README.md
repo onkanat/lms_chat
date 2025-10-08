@@ -4,7 +4,8 @@ A lightweight, browser-based interface for interacting with [LM Studio](https://
 
 ## What's New in Beta 1.1
 
-- **Enhanced Prompt Editor**: Completely redesigned with formatting toolbar, templates, and keyboard shortcuts
+- **Enhanced Prompt Editor**: Completely redesigned with formatting toolbar, templa│       ├── theme-styles.css  # Theme-specific styling
+└──s, and keyboard shortcuts
 - **Improved JSON Response Handling**: Better formatting for structured responses from models like Gemma
 - **Enhanced RAG System**: More reliable PDF processing with fallback mechanisms and improved initialization
 - **Cross-Platform Keyboard Shortcuts**: Optimized for both macOS (⌘) and Windows/Linux (Alt)
@@ -247,6 +248,7 @@ Implementation details can be found in [project/rag/unified-rag-ui.js](project/r
    - arXiv Search: `{{arxivSearch(query="machine learning", max_results="3")}}`
    - arXiv Download: `{{arxivDownload(paper_id="2303.08774")}}`
    - Calculator: `{{calculate(expression="5 * sin(45 deg) + sqrt(16)")}}`
+   - Weather: `{{weather(query="Istanbul")}}`
 5. The agent will process your tool calls and include the results in your message
 6. The AI will then respond based on the augmented message with tool results
 7. You can combine multiple tool calls in a single message
@@ -261,21 +263,6 @@ I'm researching the latest developments in transformer models.
 Can you also find a specific paper on this topic?
 
 {{arxivSearch(query="transformer neural networks", max_results="1")}}
-```
-
-### Weather Agent
-
-Bu proje içerisinde Weather Agent, Playwright ve Cheerio kullanarak hava durumu verilerini toplamak üzere geliştirilmiştir. Agent Manager üzerinden etkinleştirilerek şu adımlarla kullanılabilir:
-
-1. Weather Agent'in kaydedildiğini doğrulayın:
-   - `agent-manager.js` içindeki `loadAgents` fonksiyonunda `this.registerAgent('weather', window.WeatherAgent);` satırına bakın.
-
-2. İlgili API anahtarlarını veya konfigürasyon ayarlarını (jenerikte) düzenleyin:
-   - Kullanılan web sitelerini `performWebSearch` içinde güncelleyebilir veya gerçek API istekleri ekleyebilirsiniz.
-
-3. Kod içerisinde tipik kullanım örneği:
-   - Agent Manager etkinleştirildikten sonra Weather Agent, `{{weather(...)}}` gibi bir çağrıyı algılayıp otomatik olarak havayla ilgili bilgiyi toplayabilir.
-
 ### Accessibility Features
 
 1. Click the accessibility button (♿) in the top menu to open accessibility settings
@@ -365,12 +352,15 @@ lms_chat/
 │   │   ├── arxiv-search-agent.js      # arXiv search functionality
 │   │   ├── arxiv-download-agent.js    # arXiv paper download
 │   │   ├── calculator-agent.js        # Engineering calculator
+│   │   ├── weather-agent.js           # Weather information functionality
 │   │   ├── agent-ui.js                # Agent UI components
 │   │   └── agent-styles.css           # Agent styling
 │   ├── rag/                  # Basic RAG functionality
 │   │   ├── rag.js            # Core RAG implementation
 │   │   ├── rag-ui.js         # RAG user interface components
-│   │   └── rag-styles.css    # RAG-specific styling
+│   │   ├── rag-styles.css    # RAG-specific styling
+│   │   ├── unified-rag-ui.js         # Unified RAG UI components
+│   │   └── unified-rag-styles.css     # Unified RAG styling
 │   ├── rag-enhanced/         # Enhanced RAG functionality
 │   │   ├── rag-enhanced-core.js      # Advanced RAG implementation
 │   │   ├── rag-enhanced-ui.js        # Enhanced RAG UI components
@@ -416,6 +406,7 @@ lms_chat/
 - `agents/arxiv-search-agent.js` - arXiv search functionality
 - `agents/arxiv-download-agent.js` - arXiv paper download functionality
 - `agents/calculator-agent.js` - Engineering calculator functionality
+- `agents/weather-agent.js` - Weather information functionality
 - `agents/agent-ui.js` - Agent UI components
 - `agents/agent-styles.css` - Styling for agent system
 - `accessibility/accessibility.js` - Accessibility features and keyboard navigation
