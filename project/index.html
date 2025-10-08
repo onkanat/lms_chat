@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no">
     
     <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -20,9 +20,32 @@
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script>
     
+    <!-- RAG Enhanced Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <script>
+        // Set PDF.js worker path after the script has loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof pdfjsLib !== 'undefined') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.9.179/build/pdf.worker.min.js';
+            }
+        });
+    </script>
+    
+    <!-- TensorFlow.js ve USE kütüphaneleri - RAG için gerekli -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder"></script>
+    
     <!-- Custom Styles and Scripts -->
     <link rel="stylesheet" href="styles.css">
-    <title>LM Studio Chat</title>
+    <link rel="stylesheet" href="rag/unified-rag-styles.css">
+    <link rel="stylesheet" href="conversations/conversation-styles.css">
+    <link rel="stylesheet" href="themes/theme-styles.css">
+    <link rel="stylesheet" href="prompts/prompt-styles.css">
+    <link rel="stylesheet" href="accessibility/accessibility-styles.css">
+    <link rel="stylesheet" href="agents/agent-styles.css">
+    <title>LM Studio Chat - Beta 1.1</title>
 </head>
 <body>
     <div id="app">
@@ -35,6 +58,79 @@
         </div>
 
         <div id="connection-status">Disconnected</div>
+        <div id="version-info" class="version-info">Beta 1</div>
+        
+        <!-- Model Parameters Panel -->
+        <div id="model-params-container">
+            <button id="model-params-toggle" class="model-params-toggle" aria-label="Toggle model parameters">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <span>Parameters</span>
+            </button>
+            
+            <div id="model-params-panel" class="model-params-panel">
+                <div class="param-group">
+                    <label for="temperature-slider">Temperature: <span id="temperature-value">0.8</span></label>
+                    <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.8">
+                    <div class="param-description">Controls randomness: Lower values are more deterministic, higher values are more creative.</div>
+                </div>
+                
+                <div class="param-group">
+                    <label for="top-p-slider">Top P: <span id="top-p-value">1.0</span></label>
+                    <input type="range" id="top-p-slider" min="0" max="1" step="0.05" value="1.0">
+                    <div class="param-description">Controls diversity via nucleus sampling: 0.5 means half of probability mass is considered.</div>
+                </div>
+                
+                <div class="param-group">
+                    <label for="frequency-penalty-slider">Frequency Penalty: <span id="frequency-penalty-value">0.0</span></label>
+                    <input type="range" id="frequency-penalty-slider" min="0" max="2" step="0.1" value="0.0">
+                    <div class="param-description">Reduces repetition by penalizing tokens that have already appeared in the text.</div>
+                </div>
+                
+                <div class="param-group">
+                    <label for="presence-penalty-slider">Presence Penalty: <span id="presence-penalty-value">0.0</span></label>
+                    <input type="range" id="presence-penalty-slider" min="0" max="2" step="0.1" value="0.0">
+                    <div class="param-description">Reduces repetition by penalizing tokens that have appeared at all, regardless of frequency.</div>
+                </div>
+                
+                <div class="param-group">
+                    <label for="max-tokens-input">Max Tokens: <span id="max-tokens-value">-1 (unlimited)</span></label>
+                    <input type="number" id="max-tokens-input" min="-1" max="8192" step="1" value="-1">
+                    <div class="param-description">Maximum number of tokens to generate. -1 means model decides the appropriate length.</div>
+                </div>
+                
+                <div class="param-group">
+                    <label for="streaming-toggle">
+                        <input type="checkbox" id="streaming-toggle" checked>
+                        Enable Streaming Responses
+                    </label>
+                    <div class="param-description">When enabled, responses appear gradually as they're generated. Provides a more interactive experience.</div>
+                </div>
+                
+                <div class="param-group">
+                    <label for="model-template-select">Model Template:</label>
+                    <select id="model-template-select">
+                        <option value="default">Default Template</option>
+                        <!-- Other templates will be added dynamically -->
+                    </select>
+                    <div class="param-description">Select a template optimized for your model type. Templates include appropriate system prompts and message formatting.</div>
+                </div>
+                
+                <div class="param-group">
+                    <label for="system-prompt-textarea">System Prompt:</label>
+                    <textarea id="system-prompt-textarea" rows="3">I am Qwen, created by Alibaba Cloud. I am a helpful coder python, C, JS assistant.</textarea>
+                    <div class="param-description">Instructions that define the AI assistant's behavior and capabilities.</div>
+                </div>
+                
+                <div class="param-actions">
+                    <button id="reset-params-button">Reset to Defaults</button>
+                    <button id="save-params-button">Save as Default</button>
+                </div>
+            </div>
+        </div>
+        
         <div id="chat-container"></div>
         <div id="input-container">
             <textarea id="user-input" placeholder="Type a message..." disabled></textarea>
@@ -48,6 +144,55 @@
         </div>
     </div>
 
+    <script src="rag/rag.js"></script>
+    <script src="rag-enhanced/rag-enhanced-core.js"></script>
+    <script src="rag/unified-rag-ui.js"></script>
+    <script src="model-templates.js"></script>
+    <script src="conversations/conversation-manager.js"></script>
+    <script src="conversations/conversation-ui.js"></script>
+    <script src="themes/theme-manager.js"></script>
+    <script src="themes/theme-ui.js"></script>
+    <script src="prompts/prompt-library.js"></script>
+    <script src="prompts/prompt-ui.js"></script>
+    <script src="accessibility/accessibility.js"></script>
+    <script src="agents/weather-agent.js"></script>
+    <script src="agents/agent-manager.js"></script>
+    <script src="agents/web-search-agent.js"></script>
+    <script src="agents/web-browse-agent.js"></script>
+    <script src="agents/web-scrape-agent.js"></script>
+    <script src="agents/arxiv-search-agent.js"></script>
+    <script src="agents/arxiv-download-agent.js"></script>
+    <script src="agents/calculator-agent.js"></script>
+    <script src="agents/agent-ui.js"></script>
     <script src="app.js"></script>
+
+    <script>
+        // Initialize UI components after page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize theme components
+            if (window.ThemeManager) window.ThemeManager.init();
+            if (window.ThemeUI) window.ThemeUI.init();
+            
+            // RAG kodları kaldırıldı - app.js içinde tek bir yerden başlatılacak
+            
+            // Initialize conversation components
+            if (window.ConversationUI) window.ConversationUI.init();
+            if (window.ConversationManager) window.ConversationManager.init();
+            
+            // Initialize prompt components
+            if (window.PromptLibrary) window.PromptLibrary.init();
+            if (window.PromptUI) window.PromptUI.init();
+            
+            // Initialize accessibility
+            if (window.Accessibility) window.Accessibility.init();
+            
+            // Initialize agent components
+            if (window.AgentManager) {
+                window.AgentManager.init().then(() => {
+                    if (window.AgentUI) window.AgentUI.init();
+                }).catch(err => console.error('Error initializing Agent Manager:', err));
+            }
+        });
+    </script>
 </body>
-</html> 
+</html>
