@@ -7,7 +7,7 @@ class WeatherAgent {
   constructor() {
     this.locationKey = null;
     this.weather_data = {};
-    this.apiKey = ''; // Replace with your actual API key
+    this.apiKey = localStorage.getItem('weatherApiKey') || ''; // Get API key from localStorage
   }
 
   async execute(toolName, { location }) {

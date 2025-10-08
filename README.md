@@ -249,6 +249,7 @@ Implementation details can be found in [project/rag/unified-rag-ui.js](project/r
    - arXiv Download: `{{arxivDownload(paper_id="2303.08774")}}`
    - Calculator: `{{calculate(expression="5 * sin(45 deg) + sqrt(16)")}}`
    - Weather: `{{weather(query="Istanbul")}}`
+     - Requires AccuWeather API key. Set it in browser console: `localStorage.setItem('weatherApiKey', 'your_api_key_here')`
 5. The agent will process your tool calls and include the results in your message
 6. The AI will then respond based on the augmented message with tool results
 7. You can combine multiple tool calls in a single message
